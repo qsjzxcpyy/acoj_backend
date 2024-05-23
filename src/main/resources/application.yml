@@ -1,0 +1,122 @@
+# 公共配置文件
+# @author <a href="https://github.com/liqsj">程序员鱼皮</a>
+# @from <a href="https://qsj.icu">编程导航知识星球</a>
+spring:
+  application:
+    name: acoj_backend
+  # 默认 dev 环境
+  profiles:
+    active: dev
+  # 支持 swagger3
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  # session 配置
+  session:
+    # todo 取消注释开启分布式 session（须先配置 Redis）
+    store-type: redis
+    # 30 天过期
+    timeout: 2592000
+  # 数据库配置
+  # todo 需替换配置
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/acoj
+    username: root
+    password: root
+
+  # Redis 配置
+  # todo 需替换配置，然后取消注释
+  redis:
+    database: 1
+    host: localhost
+    port: 6379
+    jedis:
+      pool:
+        # 是否开启连接池
+        enabled: true
+        # maxactive和maxidle这两个值最好设置得比较接近一些，不然maxidle设置得太小，单方面把maxactive调得很高，这样会导致频繁的连接销毁和新建，这跟连接池的理念就相悖了。
+        # 最主要参数，配置连接池同时能维持的最大连接数，如果客户端理论上需要100个连接，则这个值设为100。
+        max-active: 8
+        # 如果客户端一段时间内不需要使用连接，又一直把所有连接池中的所有连接都维持在活动状态是很浪费资源的，所以maxIdle这个选项告诉连接池，如果客户端没有需求，那么最多维持maxIdle个空闲连接。
+        max-idle: 8
+        # 和maxIdle类似，maxIdle告诉连接池最多维持多少个空闲连接，minIdle告诉tomcat即使客户端没有需求，也要至少维持多少个空闲连接，以应对客户端的突发需求。
+        min-idle: 0
+        # 连接池出借连接的最长期限，单位是毫秒
+        max-wait: 5s
+        # 空闲对象逐出器线程的运行间隔时间。当为正值时，空闲对象逐出器线程启动，否则不执行空闲对象逐出。
+        time-between-eviction-runs: 1s
+    connect-timeout: 5000
+#    password: 123456
+  # Elasticsearch 配置
+  # todo 需替换配置，然后取消注释
+#  elasticsearch:
+#    uris: http://localhost:9200
+#    username: root
+#    password: 123456
+  # 文件上传
+  servlet:
+    multipart:
+      # 大小限制
+      max-file-size: 10MB
+server:
+  address: 0.0.0.0
+  port: 8101
+  servlet:
+    context-path: /api
+    # cookie 30 天过期
+    session:
+      cookie:
+        max-age: 2592000
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: false
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-field: isDelete # 全局逻辑删除的实体字段名
+      logic-delete-value: 1 # 逻辑已删除值（默认为 1）
+      logic-not-delete-value: 0 # 逻辑未删除值（默认为 0）
+# 微信相关
+wx:
+  # 微信公众平台
+  # todo 需替换配置
+  mp:
+    token: xxx
+    aesKey: xxx
+    appId: xxx
+    secret: xxx
+    config-storage:
+      http-client-type: HttpClient
+      key-prefix: wx
+      redis:
+        host: 127.0.0.1
+        port: 6379
+      type: Memory
+  # 微信开放平台
+  # todo 需替换配置
+  open:
+    appId: xxx
+    appSecret: xxx
+# 对象存储
+# todo 需替换配置
+cos:
+  client:
+    accessKey: xxx
+    secretKey: xxx
+    region: xxx
+    bucket: xxx
+# 接口文档配置
+knife4j:
+  enable: true
+  openapi:
+    title: "接口文档"
+    version: 1.0
+    group:
+      default:
+        api-rule: package
+        api-rule-resources:
+          - com.qsj.acoj.controller
+# 代码沙箱配置
+codeSandbox:
+  type: remote
