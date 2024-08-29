@@ -10,8 +10,6 @@ import com.qsj.acoj.model.vo.UserLoginRespVO;
 import com.qsj.acoj.model.vo.UserVO;
 import java.util.List;
 import javax.servlet.http.HttpServletRequest;
-import me.chanjar.weixin.common.bean.WxOAuth2UserInfo;
-import org.apache.poi.ss.formula.functions.T;
 
 /**
  * 用户服务
@@ -28,26 +26,17 @@ public interface UserService extends IService<User> {
      * @param checkPassword 校验密码
      * @return 新用户 id
      */
-    long userRegister(String userAccount, String userPassword, String checkPassword);
+    long userRegister(String userAccount, String userPassword, String checkPassword,String userMailbox);
 
     /**
      * 用户登录
      *
      * @param userAccount  用户账户
      * @param userPassword 用户密码
-     * @param request
      * @return 脱敏后的用户信息
      */
     UserLoginRespVO userLogin(String userAccount, String userPassword);
 
-    /**
-     * 用户登录（微信开放平台）
-     *
-     * @param wxOAuth2UserInfo 从微信获取的用户信息
-     * @param request
-     * @return 脱敏后的用户信息
-     */
-    LoginUserVO userLoginByMpOpen(WxOAuth2UserInfo wxOAuth2UserInfo, HttpServletRequest request);
 
     /**
      * 获取当前登录用户
@@ -55,7 +44,7 @@ public interface UserService extends IService<User> {
      * @param request
      * @return
      */
-    User getLoginUser(HttpServletRequest request);
+    LoginUserVO getLoginUser(HttpServletRequest request);
 
     /**
      * 获取当前登录用户（允许未登录）
@@ -63,7 +52,7 @@ public interface UserService extends IService<User> {
      * @param request
      * @return
      */
-    User getLoginUserPermitNull(HttpServletRequest request);
+    LoginUserVO getLoginUserPermitNull(HttpServletRequest request);
 
     /**
      * 是否为管理员
@@ -84,7 +73,7 @@ public interface UserService extends IService<User> {
     /**
      * 用户注销
      *
-     * @param request
+     *
      * @return
      */
     void userLogout(String accessToken);
@@ -126,5 +115,7 @@ public interface UserService extends IService<User> {
     QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
     void Test();
     long mySaveBatch(List<User> userList);
+
+    UserLoginRespVO refreshToken(String refreshToken);
 
 }

@@ -2,7 +2,6 @@ package com.qsj.acoj.utils;
 
 import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.json.JSONUtil;
-import com.qcloud.cos.utils.Jackson;
 import com.qsj.acoj.constant.TokenConstant;
 import com.qsj.acoj.model.entity.AccessToken;
 import io.github.classgraph.json.JSONUtils;
@@ -13,6 +12,9 @@ import javax.annotation.Resource;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @Repository
@@ -38,9 +40,12 @@ public class RedisTokenUtils {
         String redisKey = formatKey(access);
         redisTemplate.delete(redisKey);
     }
-    String formatKey(String accessToken) {
+    private static String  formatKey(String accessToken) {
         return String.format(TokenConstant.USER_ACCESS_TOKEN,accessToken);
     }
-
+    public void deleteList(Collection<String> accessTokens) {
+        List<String> redisKeys = CollectionUtils.convertList(accessTokens, RedisTokenUtils::formatKey);
+        redisTemplate.delete(redisKeys);
+    }
 
 }

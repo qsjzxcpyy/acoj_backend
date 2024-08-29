@@ -2,6 +2,8 @@ package com.qsj.acoj.model.vo;
 
 import java.io.Serializable;
 import java.util.Date;
+
+import lombok.Builder;
 import lombok.Data;
 
 /**
@@ -10,11 +12,13 @@ import lombok.Data;
  *
  **/
 @Data
+@Builder
 public class LoginUserVO implements Serializable {
     public static String INFO_KEY_USERNAME = "userName";
     public static String INFO_KEY_USERAVATAR = "userAvatar";
     public static String INFO_KEY_USERPROFILE = "userProfile";
     public static String INFO_KEY_USERROLE = "userRole";
+    public static String INFO_KEY_USEMAILBOX = "userMailbox";
 
     /**
      * 用户 id
@@ -42,14 +46,9 @@ public class LoginUserVO implements Serializable {
     private String userRole;
 
     /**
-     * 创建时间
+     * 用户邮箱
      */
-    private Date createTime;
-
-    /**
-     * 更新时间
-     */
-    private Date updateTime;
+    private  String userMailbox;
 
     private static final long serialVersionUID = 1L;
 }

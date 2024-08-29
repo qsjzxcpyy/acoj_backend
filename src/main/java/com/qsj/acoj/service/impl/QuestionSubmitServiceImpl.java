@@ -17,6 +17,7 @@ import com.qsj.acoj.model.entity.QuestionSubmit;
 import com.qsj.acoj.model.entity.User;
 import com.qsj.acoj.model.enums.QuestionSubmitLanguageEnum;
 import com.qsj.acoj.model.enums.QuestionSubmitStatusEnum;
+import com.qsj.acoj.model.vo.LoginUserVO;
 import com.qsj.acoj.model.vo.QuestionSubmitVO;
 import com.qsj.acoj.model.vo.QuestionVO;
 import com.qsj.acoj.model.vo.UserVO;
@@ -65,7 +66,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
      * @return
      */
     @Override
-    public QuestionSubmitResp doQuestionSubmit(QuestionSubmitAddRequest questionSubmitAddRequest, User loginUser) {
+    public QuestionSubmitResp   doQuestionSubmit(QuestionSubmitAddRequest questionSubmitAddRequest, LoginUserVO loginUser) {
         // 判断实体是否存在，根据类别获取实体
         Question question = questionService.getById(questionSubmitAddRequest.getQuestionId());
         if (question == null) {

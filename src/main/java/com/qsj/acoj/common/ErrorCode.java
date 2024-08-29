@@ -16,7 +16,10 @@ public enum ErrorCode {
     SYSTEM_ERROR(50000, "系统内部异常"),
     OPERATION_ERROR(50001, "操作失败"),
 
-    API_REQUEST_ERROR(50010,"接口调用失败");
+    API_REQUEST_ERROR(50010,"接口调用失败"),
+    REFRESH_TOKEN_EXPIRED(50020,"刷新令牌过期"),
+    ACCESS_TOKEN_EXPIRED(50030,"访问令牌过期");
+
 
     /**
      * 状态码

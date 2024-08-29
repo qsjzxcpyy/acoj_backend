@@ -6,8 +6,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
  * 全局跨域配置
- *
- *
  */
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
@@ -19,9 +17,9 @@ public class CorsConfig implements WebMvcConfigurer {
                 // 允许发送 Cookie
                 .allowCredentials(true)
                 // 放行哪些域名（必须用 patterns，否则 * 会和 allowCredentials 冲突）
-                .allowedOriginPatterns("*")
+                .allowedOriginPatterns("http://8.130.185.146:80","http://localhost:8080","http://8.130.185.146","http://acoj.qsjzxcpyy.icu:80","http://acoj.qsjzxcpyy.icu")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
+                .allowedHeaders("content-type", "requesttoken", "token_access")
                 .exposedHeaders("*");
     }
 }

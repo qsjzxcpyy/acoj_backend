@@ -37,6 +37,11 @@ public class QuestionVO implements Serializable {
     private List<String> tags;
 
     /**
+     * 答案
+     */
+    private String answer;
+
+    /**
      * 点赞数
      */
     private Integer thumbNum;

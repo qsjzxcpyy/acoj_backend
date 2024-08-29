@@ -8,6 +8,6 @@ public interface TokenConstant {
 
      String USER_ACCESS_TOKEN = "user_access_token:%s";
 
-     String HEADER_ACCESS_TOKEN = "token:access";
+     String HEADER_ACCESS_TOKEN = "Token_access";
 
 }

@@ -5,9 +5,14 @@ import com.qsj.acoj.model.entity.AccessToken;
 import com.qsj.acoj.mybatis.BaseMapperX;
 import org.mapstruct.Mapper;
 
-@Mapper
+import java.util.List;
+
 public interface AccessTokenMapper extends BaseMapperX<AccessToken> {
   default AccessToken selectByAccessToke(String accessToken) {
       return selectOne(AccessToken::getAccessToken,accessToken);
+    }
+
+    default List<AccessToken> selectListByRefreshToken(String refreshToken) {
+      return selectList(AccessToken::getRefreshToken,refreshToken);
     }
 }

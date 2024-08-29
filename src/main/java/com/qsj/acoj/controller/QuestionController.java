@@ -1,6 +1,7 @@
 package com.qsj.acoj.controller;
 
 import cn.hutool.json.JSONUtil;
+import cn.hutool.log.Log;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.qsj.acoj.annotation.AuthCheck;
 import com.qsj.acoj.common.BaseResponse;
@@ -17,6 +18,7 @@ import com.qsj.acoj.model.dto.questionsubmit.QuestionSubmitQueryRequest;
 import com.qsj.acoj.model.entity.Question;
 import com.qsj.acoj.model.entity.QuestionSubmit;
 import com.qsj.acoj.model.entity.User;
+import com.qsj.acoj.model.vo.LoginUserVO;
 import com.qsj.acoj.model.vo.QuestionSubmitVO;
 import com.qsj.acoj.model.vo.QuestionVO;
 import com.qsj.acoj.service.QuestionService;
@@ -79,7 +81,7 @@ public class QuestionController {
             question.setJudgeConfig(JSONUtil.toJsonStr(questionAddRequest.getJudgeConfig()));
         }
         questionService.validQuestion(question, true);
-        User loginUser = userService.getLoginUser(request);
+        LoginUserVO loginUser = userService.getLoginUser(request);
         question.setUserId(loginUser.getId());
         question.setFavourNum(0);
         question.setThumbNum(0);
@@ -101,7 +103,7 @@ public class QuestionController {
         if (deleteRequest == null || deleteRequest.getId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        User user = userService.getLoginUser(request);
+        LoginUserVO user = userService.getLoginUser(request);
         long id = deleteRequest.getId();
         // 判断是否存在
         Question oldQuestion = questionService.getById(id);
@@ -163,8 +165,8 @@ public class QuestionController {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR);
         }
         //权限校验，非本人和管理员不能获取到完整的题目信息
-        User loginUser = userService.getLoginUser(request);
-        if(!(question.getUserId().equals(loginUser.getId())) && !userService.isAdmin(loginUser)){
+        LoginUserVO loginUser = userService.getLoginUser(request);
+        if(!(question.getUserId().equals(loginUser.getId())) && !userService.isAdmin(request)){
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
         return ResultUtils.success(question);
@@ -238,7 +240,7 @@ public class QuestionController {
         if (questionQueryRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        User loginUser = userService.getLoginUser(request);
+        LoginUserVO loginUser = userService.getLoginUser(request);
         questionQueryRequest.setUserId(loginUser.getId());
         long current = questionQueryRequest.getCurrent();
         long size = questionQueryRequest.getPageSize();
@@ -277,13 +279,13 @@ public class QuestionController {
         }
         // 参数校验
         questionService.validQuestion(question, false);
-        User loginUser = userService.getLoginUser(request);
+        LoginUserVO loginUser = userService.getLoginUser(request);
         long id = questionEditRequest.getId();
         // 判断是否存在
         Question oldQuestion = questionService.getById(id);
         ThrowUtils.throwIf(oldQuestion == null, ErrorCode.NOT_FOUND_ERROR);
         // 仅本人或管理员可编辑
-        if (!oldQuestion.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser)) {
+        if (!oldQuestion.getUserId().equals(loginUser.getId()) && !userService.isAdmin(request)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
         boolean result = questionService.updateById(question);
@@ -305,6 +307,7 @@ public class QuestionController {
     @PostMapping("/question_submit/do")
     public BaseResponse<QuestionSubmitResp> doQuestionSubmit(@RequestBody QuestionSubmitAddRequest questionSubmitAddRequest,
                                                              HttpServletRequest request, HttpServletResponse response) {
+        final LoginUserVO loginUser = userService.getLoginUser(request);
         if (questionSubmitAddRequest == null || questionSubmitAddRequest.getQuestionId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -318,7 +321,6 @@ public class QuestionController {
             throw new BusinessException(ErrorCode.OPERATION_ERROR,"提交频繁，请稍后重试");
         }
         // 登录才能提交
-        final User loginUser = userService.getLoginUser(request);
         QuestionSubmitResp questionSubmitResp = questionSubmitService.doQuestionSubmit(questionSubmitAddRequest, loginUser);
         return ResultUtils.success(questionSubmitResp);
     }

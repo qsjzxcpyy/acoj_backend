@@ -7,7 +7,7 @@ import com.qsj.acoj.model.entity.User;
 public interface UserTokenService {
     /**
      * 获得访问令牌
-     * @param user
+     * @param
      * @return
      */
   AccessToken getUserAccessToken(RefreshToken refreshToken);
@@ -20,6 +20,10 @@ public interface UserTokenService {
   RefreshToken getUserRefreshToken(Long userId);
 
   AccessToken removeToken(String accessToken);
+
+  AccessToken refreshToken(String refreshToken);
+
+  AccessToken checkAccessToken(String accessToken);
 
 
 }

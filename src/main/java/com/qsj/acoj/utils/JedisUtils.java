@@ -6,14 +6,20 @@ import redis.clients.jedis.JedisPoolConfig;
 
 public class JedisUtils {
     private static JedisPool jedisPool;
-    static {
-        JedisPoolConfig jedisPoolConfig = new JedisPoolConfig();
-        jedisPoolConfig.setMaxTotal(8);
-        jedisPoolConfig.setMaxIdle(5);
-        jedisPoolConfig.setMinIdle(3);
-        jedisPool = new JedisPool(jedisPoolConfig, "localhost", 6379);
-    }
-
+//    static {
+//        JedisPoolConfig jedisPoolConfig = new JedisPoolConfig();
+//        jedisPoolConfig.setMaxTotal(8);
+//        jedisPoolConfig.setMaxIdle(5);
+//        jedisPoolConfig.setMinIdle(3);
+//        jedisPool = new JedisPool(jedisPoolConfig, "localhost", 6379, 1000, "123456");
+//    }
+static {
+    JedisPoolConfig jedisPoolConfig = new JedisPoolConfig();
+    jedisPoolConfig.setMaxTotal(8);
+    jedisPoolConfig.setMaxIdle(5);
+    jedisPoolConfig.setMinIdle(3);
+    jedisPool = new JedisPool(jedisPoolConfig, "localhost", 6379);
+}
     /**
      * 获得Jedis连接实例
      * @return

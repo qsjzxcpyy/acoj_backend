@@ -24,6 +24,8 @@ import com.qsj.acoj.model.vo.UserLoginRespVO;
 import com.qsj.acoj.model.vo.UserVO;
 import com.qsj.acoj.service.UserService;
 import com.qsj.acoj.service.UserTokenService;
+import com.qsj.acoj.utils.DateUtils;
+import com.qsj.acoj.utils.RedisTokenUtils;
 import com.qsj.acoj.utils.SecurityFrameworkUtils;
 import com.qsj.acoj.utils.SqlUtils;
 
@@ -33,17 +35,16 @@ import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+
 import lombok.extern.slf4j.Slf4j;
-import me.chanjar.weixin.common.bean.WxOAuth2UserInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
 
 /**
  * 用户服务实现
- *
- *
  */
 @Service
 @Slf4j
@@ -53,24 +54,28 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Resource
     UserTokenService userTokenService;
     @Resource
+    RedisTokenUtils redisTokenUtils;
+    @Resource
     AccessTokenMapper accessTokenMapper;
+
+
     @Override
-        public long mySaveBatch(List<User> userList) {
-            int size = userList.size();
-            final int batchSize = 1000;
-            final int number = size % batchSize == 0 ? size / batchSize : size / batchSize + 1;
-             long sum = 0;
-            for(int i = 0; i < number; i ++){
-                List<User> sub = null;
-                if(i == number - 1){
-                    sub = ListUtil.sub(userList, i * batchSize, size);
-                } else {
-                     sub = ListUtil.sub(userList, i * batchSize, (i + 1) * batchSize);
-                }
-                sum += userMapper.myInsertBatch(sub);
+    public long mySaveBatch(List<User> userList) {
+        int size = userList.size();
+        final int batchSize = 1000;
+        final int number = size % batchSize == 0 ? size / batchSize : size / batchSize + 1;
+        long sum = 0;
+        for (int i = 0; i < number; i++) {
+            List<User> sub = null;
+            if (i == number - 1) {
+                sub = ListUtil.sub(userList, i * batchSize, size);
+            } else {
+                sub = ListUtil.sub(userList, i * batchSize, (i + 1) * batchSize);
             }
-            return sum;
+            sum += userMapper.myInsertBatch(sub);
         }
+        return sum;
+    }
 
     @Override
     public void Test() {
@@ -161,7 +166,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
 
         List<CompletableFuture<Long>> completableFutureList = lists.stream()
-                .map(list1 -> CompletableFuture.supplyAsync(() ->  mySaveBatch(list1),threadPool))
+                .map(list1 -> CompletableFuture.supplyAsync(() -> mySaveBatch(list1), threadPool))
                 .collect(Collectors.toList());
 
 
@@ -170,8 +175,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         System.out.println("插入条数：" + sum);
         threadPool.shutdownNow();
 
-        }
-
+    }
 
 
     // 指定线程池
@@ -196,7 +200,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public static final String SALT = "qsj";
 
     @Override
-    public long userRegister(String userAccount, String userPassword, String checkPassword) {
+    public long userRegister(String userAccount, String userPassword, String checkPassword,String userMailbox) {
         // 1. 校验
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
@@ -225,6 +229,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             User user = new User();
             user.setUserAccount(userAccount);
             user.setUserPassword(encryptPassword);
+            user.setUserMailbox(userMailbox);
+            user.setUserName(userAccount);
             boolean saveResult = this.save(user);
             if (!saveResult) {
                 throw new BusinessException(ErrorCode.SYSTEM_ERROR, "注册失败，数据库错误");
@@ -264,42 +270,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         //创建 accessToken 和 refreshToke
         return createToken(user.getId());
     }
+
     private UserLoginRespVO createToken(Long userId) {
         RefreshToken userRefreshToken = userTokenService.getUserRefreshToken(userId);
         AccessToken userAccessToken = userTokenService.getUserAccessToken(userRefreshToken);
         return ConvertUtils.convert(userAccessToken);
-    }
-
-    @Override
-    public LoginUserVO userLoginByMpOpen(WxOAuth2UserInfo wxOAuth2UserInfo, HttpServletRequest request) {
-        String unionId = wxOAuth2UserInfo.getUnionId();
-        String mpOpenId = wxOAuth2UserInfo.getOpenid();
-        // 单机锁
-        synchronized (unionId.intern()) {
-            // 查询用户是否已存在
-            QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq("unionId", unionId);
-            User user = this.getOne(queryWrapper);
-            // 被封号，禁止登录
-            if (user != null && UserRoleEnum.BAN.getValue().equals(user.getUserRole())) {
-                throw new BusinessException(ErrorCode.FORBIDDEN_ERROR, "该用户已被封，禁止登录");
-            }
-            // 用户不存在则创建
-            if (user == null) {
-                user = new User();
-                user.setUnionId(unionId);
-                user.setMpOpenId(mpOpenId);
-                user.setUserAvatar(wxOAuth2UserInfo.getHeadImgUrl());
-                user.setUserName(wxOAuth2UserInfo.getNickname());
-                boolean result = this.save(user);
-                if (!result) {
-                    throw new BusinessException(ErrorCode.SYSTEM_ERROR, "登录失败");
-                }
-            }
-            // 记录用户的登录态
-            request.getSession().setAttribute(USER_LOGIN_STATE, user);
-            return getLoginUserVO(user);
-        }
     }
 
     /**
@@ -309,20 +284,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      * @return
      */
     @Override
-    public User getLoginUser(HttpServletRequest request) {
-        // 先判断是否已登录
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User currentUser = (User) userObj;
-        if (currentUser == null || currentUser.getId() == null) {
+    public LoginUserVO getLoginUser(HttpServletRequest request) {
+        String accessToken = request.getHeader(TokenConstant.HEADER_ACCESS_TOKEN);
+        if (accessToken == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
-        // 从数据库查询（追求性能的话可以注释，直接走缓存）
-        long userId = currentUser.getId();
-        currentUser = this.getById(userId);
-        if (currentUser == null) {
+        AccessToken accessToken1 = redisTokenUtils.get(accessToken);
+        if (accessToken1 == null) {
+            accessToken1 = accessTokenMapper.selectByAccessToke(accessToken);
+        }
+
+        if (accessToken1 != null && DateUtils.isExpired(accessToken1.getExpiresTime())) {
+            throw new BusinessException(ErrorCode.ACCESS_TOKEN_EXPIRED);
+        }
+        LoginUserVO loginUserVO = SecurityFrameworkUtils.getLoginUserVO();
+        if (loginUserVO == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
-        return currentUser;
+        return loginUserVO;
     }
 
     /**
@@ -332,16 +311,18 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      * @return
      */
     @Override
-    public User getLoginUserPermitNull(HttpServletRequest request) {
+    public LoginUserVO getLoginUserPermitNull(HttpServletRequest request) {
         // 先判断是否已登录
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User currentUser = (User) userObj;
-        if (currentUser == null || currentUser.getId() == null) {
-            return null;
-        }
-        // 从数据库查询（追求性能的话可以注释，直接走缓存）
-        long userId = currentUser.getId();
-        return this.getById(userId);
+//        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+//        User currentUser = (User) userObj;
+//        if (currentUser == null || currentUser.getId() == null) {
+//            return null;
+//        }
+//        // 从数据库查询（追求性能的话可以注释，直接走缓存）
+//        long userId = currentUser.getId();
+//        return this.getById(userId);
+        LoginUserVO loginUserVO = SecurityFrameworkUtils.getLoginUserVO();
+        return loginUserVO;
     }
 
     /**
@@ -353,8 +334,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Override
     public boolean isAdmin(HttpServletRequest request) {
         // 仅管理员可查询
-        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
-        User user = (User) userObj;
+//        Object userObj = request.getSession().getAttribute(USER_LOGIN_STATE);
+//        User user = (User) userObj;
+//        return isAdmin(user);
+        Long loginUserId = SecurityFrameworkUtils.getLoginUserId();
+        User user = userMapper.selectById(loginUserId);
         return isAdmin(user);
     }
 
@@ -366,7 +350,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     /**
      * 用户注销
      *
-     * @param request
+     * @param
      */
     @Override
     public void userLogout(String accessToken) {
@@ -378,10 +362,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (user == null) {
             return null;
         }
-        LoginUserVO loginUserVO = new LoginUserVO();
+        LoginUserVO loginUserVO = LoginUserVO.builder().build();
         BeanUtils.copyProperties(user, loginUserVO);
         return loginUserVO;
     }
+
     @Override
     public UserLoginRespVO getUserLoginRespVo(User user) {
         if (user == null) {
@@ -434,4 +419,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 sortField);
         return queryWrapper;
     }
+
+    @Override
+    public UserLoginRespVO refreshToken(String refreshToken) {
+        return ConvertUtils.convert(userTokenService.refreshToken(refreshToken));
+    }
+
 }

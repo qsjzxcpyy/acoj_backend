@@ -5,6 +5,7 @@ import com.qsj.acoj.common.ErrorCode;
 import com.qsj.acoj.exception.BusinessException;
 import com.qsj.acoj.model.entity.User;
 import com.qsj.acoj.model.enums.UserRoleEnum;
+import com.qsj.acoj.model.vo.LoginUserVO;
 import com.qsj.acoj.service.UserService;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -41,7 +42,7 @@ public class AuthInterceptor {
         RequestAttributes requestAttributes = RequestContextHolder.currentRequestAttributes();
         HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
         // 当前登录用户
-        User loginUser = userService.getLoginUser(request);
+        LoginUserVO loginUser = userService.getLoginUser(request);
         // 必须有该权限才通过
         if (StringUtils.isNotBlank(mustRole)) {
             UserRoleEnum mustUserRoleEnum = UserRoleEnum.getEnumByValue(mustRole);
