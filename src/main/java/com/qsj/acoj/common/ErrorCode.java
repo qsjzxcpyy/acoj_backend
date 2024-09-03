@@ -18,7 +18,10 @@ public enum ErrorCode {
 
     API_REQUEST_ERROR(50010,"接口调用失败"),
     REFRESH_TOKEN_EXPIRED(50020,"刷新令牌过期"),
-    ACCESS_TOKEN_EXPIRED(50030,"访问令牌过期");
+    ACCESS_TOKEN_EXPIRED(50030,"访问令牌过期"),
+    NO_AI_ACCESS_TOKEN(50040,"无访问令牌"),
+    // 请求失败
+    AI_API_REQUEST_ERROR_CODE(50050,"请求失败");
 
 
     /**

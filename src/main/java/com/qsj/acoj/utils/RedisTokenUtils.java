@@ -2,6 +2,7 @@ package com.qsj.acoj.utils;
 
 import cn.hutool.core.date.LocalDateTimeUtil;
 import cn.hutool.json.JSONUtil;
+import com.qsj.acoj.constant.AiConstant;
 import com.qsj.acoj.constant.TokenConstant;
 import com.qsj.acoj.model.entity.AccessToken;
 import io.github.classgraph.json.JSONUtils;
@@ -41,11 +42,20 @@ public class RedisTokenUtils {
         redisTemplate.delete(redisKey);
     }
     private static String  formatKey(String accessToken) {
-        return String.format(TokenConstant.USER_ACCESS_TOKEN,accessToken);
+        return String.format(TokenConstant.USER_ACCESS_TOKEN, accessToken);
     }
     public void deleteList(Collection<String> accessTokens) {
         List<String> redisKeys = CollectionUtils.convertList(accessTokens, RedisTokenUtils::formatKey);
         redisTemplate.delete(redisKeys);
+    }
+
+    public String getAiAccessToken() {
+        Object o = redisTemplate.opsForValue().get(AiConstant.AI_ACCESS_TOKEN);
+        if(o == null) {
+            return null;
+        } else {
+            return (String)o;
+        }
     }
 
 }

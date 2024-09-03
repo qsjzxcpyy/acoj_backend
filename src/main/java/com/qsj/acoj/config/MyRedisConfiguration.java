@@ -12,7 +12,7 @@ import org.springframework.data.redis.serializer.RedisSerializer;
 
 @AutoConfiguration(before =  RedissonAutoConfiguration.class)
 //@Configuration
-public class myredisconfiguration {
+public class MyRedisConfiguration {
 
 //    @Bean
 //    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {

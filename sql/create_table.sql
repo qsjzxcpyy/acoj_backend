@@ -1,5 +1,3 @@
-
-
 -- 创建库
 create database if not exists acoj;
 
@@ -74,23 +72,44 @@ create table if not exists question_submit
 #     index idx_postId (postId),
 #     index idx_userId (userId)
 # ) comment '帖子收藏';
-create table if not exists access_token (
-    id              bigint auto_increment comment 'id' primary key ,
-    userId         bigint                             not null ,
-    userInfo        varchar(2560)                      not null ,
-    accessToken     varchar(128)                       not null ,
-    refreshToken    varchar(128)                       not null ,
-    expiresTime    datetime                           not null ,
-    createTime      datetime default CURRENT_TIMESTAMP not null comment '创建时间',
-    updateTime      datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
-    isDelete        tinyint  default 0                 not null comment '是否删除'
+create table if not exists access_token
+(
+    id           bigint auto_increment comment 'id' primary key,
+    userId       bigint                             not null,
+    userInfo     varchar(2560)                      not null,
+    accessToken  varchar(128)                       not null,
+    refreshToken varchar(128)                       not null,
+    expiresTime  datetime                           not null,
+    createTime   datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    updateTime   datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    isDelete     tinyint  default 0                 not null comment '是否删除'
 ) comment '访问Token';
-create table if not exists refresh_token (
-    id bigint auto_increment comment 'id' primary key ,
-    userId bigint not null ,
-    refreshToken varchar(128) not null ,
-    expiresTime datetime not null ,
-    createTime datetime default CURRENT_TIMESTAMP not null comment '创建时间',
-    updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
-    isDelete   tinyint  default 0                 not null comment '是否删除'
+create table if not exists refresh_token
+(
+    id           bigint auto_increment comment 'id' primary key,
+    userId       bigint                             not null,
+    refreshToken varchar(128)                       not null,
+    expiresTime  datetime                           not null,
+    createTime   datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    updateTime   datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    isDelete     tinyint  default 0                 not null comment '是否删除'
 ) comment '刷新Token';
+
+create table if not exists ai_access_token
+(
+    id          bigint auto_increment comment 'id' primary key,
+    accessToken varchar(128)                       not null,
+    expiresTime datetime                           not null,
+    createTime  datetime default CURRENT_TIMESTAMP not null comment '创建时间'
+) comment 'ai_accessToken';
+
+create table if not exists ai_question_chat
+(
+    id           bigint auto_increment comment 'id' primary key,
+    userId       bigint                             not null,
+    userName     varchar(128)                       not null,
+    userRequest text,
+    aiResponse  text                               not null,
+    createTime   datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+   index idx_userId (userId)
+) comment '对话记录';

@@ -18,7 +18,7 @@ static {
     jedisPoolConfig.setMaxTotal(8);
     jedisPoolConfig.setMaxIdle(5);
     jedisPoolConfig.setMinIdle(3);
-    jedisPool = new JedisPool(jedisPoolConfig, "localhost", 6379);
+    jedisPool = new JedisPool(jedisPoolConfig, "localhost", 6379, 1000, "123456");
 }
     /**
      * 获得Jedis连接实例

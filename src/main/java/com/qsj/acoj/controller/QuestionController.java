@@ -1,7 +1,6 @@
 package com.qsj.acoj.controller;
 
 import cn.hutool.json.JSONUtil;
-import cn.hutool.log.Log;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.qsj.acoj.annotation.AuthCheck;
 import com.qsj.acoj.common.BaseResponse;
@@ -10,37 +9,37 @@ import com.qsj.acoj.common.ErrorCode;
 import com.qsj.acoj.common.ResultUtils;
 import com.qsj.acoj.constant.QuestionConstant;
 import com.qsj.acoj.constant.UserConstant;
+import com.qsj.acoj.convert.QuestionConvert;
 import com.qsj.acoj.exception.BusinessException;
 import com.qsj.acoj.exception.ThrowUtils;
 import com.qsj.acoj.model.dto.question.*;
 import com.qsj.acoj.model.dto.questionsubmit.QuestionSubmitAddRequest;
 import com.qsj.acoj.model.dto.questionsubmit.QuestionSubmitQueryRequest;
+import com.qsj.acoj.model.entity.AiQuestionChat;
 import com.qsj.acoj.model.entity.Question;
 import com.qsj.acoj.model.entity.QuestionSubmit;
-import com.qsj.acoj.model.entity.User;
+import com.qsj.acoj.model.vo.AiChatRecordVo;
 import com.qsj.acoj.model.vo.LoginUserVO;
 import com.qsj.acoj.model.vo.QuestionSubmitVO;
 import com.qsj.acoj.model.vo.QuestionVO;
+import com.qsj.acoj.service.AiQuestionChatService;
 import com.qsj.acoj.service.QuestionService;
 import com.qsj.acoj.service.QuestionSubmitService;
 import com.qsj.acoj.service.UserService;
-import com.qsj.acoj.utils.JedisUtils;
 import com.qsj.acoj.utils.RequestTokenUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
-import redis.clients.jedis.Jedis;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.constraints.NotEmpty;
+import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 题目接口
- *
- *
  */
 @RestController
 @RequestMapping("/question")
@@ -55,14 +54,14 @@ public class QuestionController {
     @Resource
     private QuestionSubmitService questionSubmitService;
 
+    @Resource
+    private AiQuestionChatService aiQuestionChatService;
+
     // region 增删改查
 
     /**
      * 创建
      *
-     * @param questionAddRequest
-     * @param request
-     * @return
      */
     @PostMapping("/add")
     public BaseResponse<Long> addQuestion(@RequestBody QuestionAddRequest questionAddRequest, HttpServletRequest request) {
@@ -75,9 +74,10 @@ public class QuestionController {
         if (tags != null) {
             question.setTags(JSONUtil.toJsonStr(tags));
         }
-        if(questionAddRequest.getJudgeCase() != null){
+        if (questionAddRequest.getJudgeCase() != null) {
             question.setJudgeCase(JSONUtil.toJsonStr(questionAddRequest.getJudgeCase()));
-        }if(questionAddRequest.getJudgeConfig() != null){
+        }
+        if (questionAddRequest.getJudgeConfig() != null) {
             question.setJudgeConfig(JSONUtil.toJsonStr(questionAddRequest.getJudgeConfig()));
         }
         questionService.validQuestion(question, true);
@@ -94,9 +94,6 @@ public class QuestionController {
     /**
      * 删除
      *
-     * @param deleteRequest
-     * @param request
-     * @return
      */
     @PostMapping("/delete")
     public BaseResponse<Boolean> deleteQuestion(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
@@ -119,8 +116,6 @@ public class QuestionController {
     /**
      * 更新（仅管理员）
      *
-     * @param questionUpdateRequest
-     * @return
      */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
@@ -134,9 +129,10 @@ public class QuestionController {
         if (tags != null) {
             question.setTags(JSONUtil.toJsonStr(tags));
         }
-        if(questionUpdateRequest.getJudgeCase() != null){
+        if (questionUpdateRequest.getJudgeCase() != null) {
             question.setJudgeCase(JSONUtil.toJsonStr(questionUpdateRequest.getJudgeCase()));
-        }if(questionUpdateRequest.getJudgeConfig() != null){
+        }
+        if (questionUpdateRequest.getJudgeConfig() != null) {
             question.setJudgeConfig(JSONUtil.toJsonStr(questionUpdateRequest.getJudgeConfig()));
         }
         // 参数校验
@@ -149,11 +145,10 @@ public class QuestionController {
         boolean result = questionService.updateById(question);
         return ResultUtils.success(result);
     }
+
     /**
      * 根据 id 获取question
      *
-     * @param id
-     * @return
      */
     @GetMapping("/get")
     public BaseResponse<Question> getQuestionById(long id, HttpServletRequest request) {
@@ -166,7 +161,7 @@ public class QuestionController {
         }
         //权限校验，非本人和管理员不能获取到完整的题目信息
         LoginUserVO loginUser = userService.getLoginUser(request);
-        if(!(question.getUserId().equals(loginUser.getId())) && !userService.isAdmin(request)){
+        if (!(question.getUserId().equals(loginUser.getId())) && !userService.isAdmin(request)) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
         return ResultUtils.success(question);
@@ -175,8 +170,6 @@ public class QuestionController {
     /**
      * 根据 id 获取脱敏question
      *
-     * @param id
-     * @return
      */
     @GetMapping("/get/vo")
     public BaseResponse<QuestionVO> getQuestionVOById(long id, HttpServletRequest request) {
@@ -193,8 +186,6 @@ public class QuestionController {
     /**
      * 分页获取列表（仅管理员）
      *
-     * @param questionQueryRequest
-     * @return
      */
     @PostMapping("/list/page")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
@@ -210,10 +201,6 @@ public class QuestionController {
 
     /**
      * 分页获取列表（封装类）
-     *
-     * @param questionQueryRequest
-     * @param request
-     * @return
      */
     @PostMapping("/list/page/vo")
     public BaseResponse<Page<QuestionVO>> listQuestionVOByPage(@RequestBody QuestionQueryRequest questionQueryRequest,
@@ -230,9 +217,6 @@ public class QuestionController {
     /**
      * 分页获取当前用户创建的资源列表
      *
-     * @param questionQueryRequest
-     * @param request
-     * @return
      */
     @PostMapping("/my/list/page/vo")
     public BaseResponse<Page<QuestionVO>> listMyQuestionVOByPage(@RequestBody QuestionQueryRequest questionQueryRequest,
@@ -257,9 +241,6 @@ public class QuestionController {
     /**
      * 编辑（题目）
      *
-     * @param questionEditRequest
-     * @param request
-     * @return
      */
     @PostMapping("/edit")
     public BaseResponse<Boolean> editQuestion(@RequestBody QuestionEditRequest questionEditRequest, HttpServletRequest request) {
@@ -272,9 +253,10 @@ public class QuestionController {
         if (tags != null) {
             question.setTags(JSONUtil.toJsonStr(tags));
         }
-        if(questionEditRequest.getJudgeCase() != null){
+        if (questionEditRequest.getJudgeCase() != null) {
             question.setJudgeCase(JSONUtil.toJsonStr(questionEditRequest.getJudgeCase()));
-        }if(questionEditRequest.getJudgeConfig() != null){
+        }
+        if (questionEditRequest.getJudgeConfig() != null) {
             question.setJudgeConfig(JSONUtil.toJsonStr(questionEditRequest.getJudgeConfig()));
         }
         // 参数校验
@@ -293,42 +275,35 @@ public class QuestionController {
     }
 
 
-
-
-
-
     /**
      * 题目提交
      *
-     * @param questionSubmitAddRequest
-     * @param request
      * @return resultNum 本次提交变化数
      */
     @PostMapping("/question_submit/do")
     public BaseResponse<QuestionSubmitResp> doQuestionSubmit(@RequestBody QuestionSubmitAddRequest questionSubmitAddRequest,
                                                              HttpServletRequest request, HttpServletResponse response) {
-        final LoginUserVO loginUser = userService.getLoginUser(request);
+         LoginUserVO loginUser = userService.getLoginUser(request);
         if (questionSubmitAddRequest == null || questionSubmitAddRequest.getQuestionId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         String token = request.getHeader(QuestionConstant.REQUEST_TOKEN);
-        System.out.println("前端携带的请求token: "  + token);
-        if(token == null || token == ""){
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"调用接口未生成token");
+        System.out.println("前端携带的请求token: " + token);
+        if (token == null || token.isEmpty()) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "调用接口未生成token");
         }
 
-        if(!RequestTokenUtils.verify(token)){
-            throw new BusinessException(ErrorCode.OPERATION_ERROR,"提交频繁，请稍后重试");
+        if (!RequestTokenUtils.verify(token)) {
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "提交频繁，请稍后重试");
         }
         // 登录才能提交
         QuestionSubmitResp questionSubmitResp = questionSubmitService.doQuestionSubmit(questionSubmitAddRequest, loginUser);
         return ResultUtils.success(questionSubmitResp);
     }
+
     /**
      * 分页获取提交题目状态，
      *
-     * @param questionSubmitQueryRequest
-     * @return
      */
     @PostMapping("/question_submit/list/page")
     public BaseResponse<Page<QuestionSubmitVO>> listQuestionSubmitByPage(@RequestBody QuestionSubmitQueryRequest questionSubmitQueryRequest,
@@ -337,14 +312,25 @@ public class QuestionController {
         long size = questionSubmitQueryRequest.getPageSize();
         Page<QuestionSubmit> questionSubmitPage = questionSubmitService.page(new Page<>(current, size),
                 questionSubmitService.getQueryWrapper(questionSubmitQueryRequest));
-        return ResultUtils.success(questionSubmitService.getQuestionSubmitVOPage(questionSubmitPage,request));
+        return ResultUtils.success(questionSubmitService.getQuestionSubmitVOPage(questionSubmitPage, request));
     }
 
     @GetMapping("/get/requestToken")
-    public BaseResponse<String> getRequestToken(){
+    public BaseResponse<String> getRequestToken() {
         String token = RequestTokenUtils.getRequestToken();
         System.out.println("前端调用token生成接口生成的token: " + token);
         return ResultUtils.success(token);
+    }
+
+    @PostMapping("/get/chat/response")
+    public BaseResponse<String> getChatResponse(@NotEmpty @RequestBody  String question,HttpServletRequest request) throws IOException {
+        return ResultUtils.success(aiQuestionChatService.getChatResponse(question,request));
+    }
+
+    @GetMapping("/get/chat/record")
+    public BaseResponse<List<AiChatRecordVo>> getChatRecord(HttpServletRequest request) {
+        List<AiQuestionChat> aiQuestionChats = aiQuestionChatService.listTopQuestionChat(request);
+        return ResultUtils.success( QuestionConvert.INSTANCE.mapTo(aiQuestionChats));
     }
 
 }
