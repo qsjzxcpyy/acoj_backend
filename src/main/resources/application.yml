@@ -21,7 +21,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://127.0.0.1:3306/acoj
     username: root
-    password: root
+    password: qishijun0611
 
   # Redis 配置
   # todo 需替换配置，然后取消注释
@@ -45,7 +45,7 @@ spring:
         # 空闲对象逐出器线程的运行间隔时间。当为正值时，空闲对象逐出器线程启动，否则不执行空闲对象逐出。
         time-between-eviction-runs: 1s
     connect-timeout: 5000
-    password: 123456
+#    password: 123456
   # Elasticsearch 配置
   # todo 需替换配置，然后取消注释
 #  elasticsearch:

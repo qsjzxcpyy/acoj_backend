@@ -14,8 +14,10 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @TableName("ai_question_chat")
-@Data
-@EqualsAndHashCode
+@Setter
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
 public class AiQuestionChat implements Serializable {
     private static final long serialVersionUID = 1L;
 

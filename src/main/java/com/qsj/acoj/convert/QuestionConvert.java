@@ -3,7 +3,6 @@ package com.qsj.acoj.convert;
 import com.qsj.acoj.model.entity.AiQuestionChat;
 import com.qsj.acoj.model.vo.AiChatRecordVo;
 import org.mapstruct.Mapper;
-import org.mapstruct.NullValueCheckStrategy;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
@@ -21,6 +20,5 @@ public interface QuestionConvert {
 
     // AiQuestionChat 转换 AiQuestionChatVO
     public List<AiChatRecordVo> mapTo(List<AiQuestionChat> aiQuestionChat);
-
 
 }
