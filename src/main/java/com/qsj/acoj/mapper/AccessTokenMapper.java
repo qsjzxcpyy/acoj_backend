@@ -15,4 +15,6 @@ public interface AccessTokenMapper extends BaseMapperX<AccessToken> {
     default List<AccessToken> selectListByRefreshToken(String refreshToken) {
       return selectList(AccessToken::getRefreshToken,refreshToken);
     }
+
+    List<AccessToken> getByRefreshToken(String refreshToken);
 }

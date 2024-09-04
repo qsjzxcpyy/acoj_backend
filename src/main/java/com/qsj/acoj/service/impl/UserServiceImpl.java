@@ -6,6 +6,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.thread.ThreadFactoryBuilder;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.qsj.acoj.common.ErrorCode;
 import com.qsj.acoj.constant.CommonConstant;
@@ -13,6 +14,7 @@ import com.qsj.acoj.constant.TokenConstant;
 import com.qsj.acoj.convert.ConvertUtils;
 import com.qsj.acoj.exception.BusinessException;
 import com.qsj.acoj.mapper.AccessTokenMapper;
+import com.qsj.acoj.mapper.RefreshTokenMapper;
 import com.qsj.acoj.mapper.UserMapper;
 import com.qsj.acoj.model.dto.user.UserQueryRequest;
 import com.qsj.acoj.model.entity.AccessToken;
@@ -57,6 +59,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     RedisTokenUtils redisTokenUtils;
     @Resource
     AccessTokenMapper accessTokenMapper;
+
+    @Resource
+    RefreshTokenMapper refreshTokenMapper;
+
+
 
 
     @Override
@@ -272,6 +279,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
 
     private UserLoginRespVO createToken(Long userId) {
+        List<RefreshToken> refreshTokens = refreshTokenMapper.selectList(Wrappers.<RefreshToken>lambdaQuery()
+                .eq(RefreshToken::getUserId, userId));
+        if(!refreshTokens.isEmpty()) {
+            List<AccessToken> accessTokens = accessTokenMapper.getByRefreshToken(refreshTokens.get(0).getRefreshToken());
+            return ConvertUtils.convert(accessTokens.get(0));
+        }
+
         RefreshToken userRefreshToken = userTokenService.getUserRefreshToken(userId);
         AccessToken userAccessToken = userTokenService.getUserAccessToken(userRefreshToken);
         return ConvertUtils.convert(userAccessToken);

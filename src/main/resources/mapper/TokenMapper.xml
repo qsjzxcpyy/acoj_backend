@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- @author <a href="https://github.com/liqsj">程序员鱼皮</a> -->
+<!-- @from <a href="https://qsj.icu">编程导航知识星球</a> -->
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.qsj.acoj.mapper.AccessTokenMapper">
+    <select id="getByRefreshToken" resultType="com.qsj.acoj.model.entity.AccessToken">
+        select * from access_token
+        where refreshToken = #{refreshToken}
+        order by create_time desc
+    </select>
+</mapper>
