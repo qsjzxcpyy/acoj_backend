@@ -1,6 +1,7 @@
 package com.qsj.acoj.judge;
 
 import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.qsj.acoj.common.ErrorCode;
 import com.qsj.acoj.judge.codesandbox.CodeSandbox;
 import com.qsj.acoj.judge.codesandbox.CodeSandboxFactory;
@@ -13,6 +14,7 @@ import com.qsj.acoj.model.dto.question.JudgeCase;
 import com.qsj.acoj.judge.codesandbox.model.JudgeInfo;
 import com.qsj.acoj.model.entity.Question;
 import com.qsj.acoj.model.entity.QuestionSubmit;
+import com.qsj.acoj.model.enums.JudgeInfoMessageEnum;
 import com.qsj.acoj.model.enums.QuestionSubmitStatusEnum;
 import com.qsj.acoj.service.QuestionService;
 import com.qsj.acoj.service.QuestionSubmitService;
@@ -99,6 +101,16 @@ public class JudgeSeviceImpl implements JudgeService {
         judgeContext.setJudgeCase(listJudgeCase);
 
         JudgeInfo finalJudgeInfo = judgeManage.doJudge(judgeContext);
+        if (finalJudgeInfo.getMessage().equals(JudgeInfoMessageEnum.ACCEPTED.getText())) {
+            questionService.update(Wrappers.<Question>lambdaUpdate()
+                    .eq(Question::getId, questionSubmit.getQuestionId())
+                    .setSql("acceptedNum = acceptedNum + 1")); // 使用 setSql 进行自增操作
+        }
+
+        questionService.update(Wrappers.<Question>lambdaUpdate()
+                .eq(Question::getId, questionSubmit.getQuestionId())
+                .setSql("submitNum = submitNum + 1")); // 使用 setSql 进行自增操作
+
 
         //设置题目判题情况，设置判题状态
         questionSubmitUpdate = new QuestionSubmit();
