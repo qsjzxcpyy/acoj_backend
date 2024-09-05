@@ -8,6 +8,6 @@
     <select id="getByRefreshToken" resultType="com.qsj.acoj.model.entity.AccessToken">
         select * from access_token
         where refreshToken = #{refreshToken}
-        order by create_time desc
+        order by createTime desc
     </select>
 </mapper>
