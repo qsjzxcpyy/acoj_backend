@@ -21,6 +21,7 @@ import com.qsj.acoj.model.vo.LoginUserVO;
 import com.qsj.acoj.model.vo.QuestionSubmitVO;
 import com.qsj.acoj.model.vo.QuestionVO;
 import com.qsj.acoj.model.vo.UserVO;
+import com.qsj.acoj.service.ContestService;
 import com.qsj.acoj.service.QuestionService;
 import com.qsj.acoj.service.QuestionSubmitService;
 import com.qsj.acoj.mapper.QuestionSubmitMapper;
@@ -57,6 +58,8 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
     @Lazy //懒加载， 只有使用到的时候进行初始化，为了解决循环依赖
     JudgeService judgeService;
 
+    @Resource
+    private ContestService contestService;
 
     /**
      * 题目提交
@@ -66,7 +69,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
      * @return
      */
     @Override
-    public QuestionSubmitResp   doQuestionSubmit(QuestionSubmitAddRequest questionSubmitAddRequest, LoginUserVO loginUser) {
+    public QuestionSubmitResp doQuestionSubmit(QuestionSubmitAddRequest questionSubmitAddRequest, LoginUserVO loginUser) {
         // 判断实体是否存在，根据类别获取实体
         Question question = questionService.getById(questionSubmitAddRequest.getQuestionId());
         if (question == null) {
@@ -88,7 +91,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         questionSubmit.setUserId(loginUser.getId());
         questionSubmit.setLanguage(language);
         questionSubmit.setCode(questionSubmitAddRequest.getCode());
-        questionSubmit.setStatus(QuestionSubmitStatusEnum.WAITTING.getValue());
+        questionSubmit.setStatus(QuestionSubmitStatusEnum.WAITING.getValue());
         questionSubmit.setJudgeInfo("{}");
 
         boolean isSave = this.save(questionSubmit);
@@ -153,7 +156,16 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
     @Override
     public QuestionSubmitVO getQuestionSubmitVO(QuestionSubmit questionSubmit, HttpServletRequest request) {
         QuestionSubmitVO questionSubmitVO = QuestionSubmitVO.objToVo(questionSubmit);
+        
+        // 获取当前登录用户
+        LoginUserVO loginUser = userService.getLoginUser(request);
+        // 如果是自己的提交，则可以看到代码
+        if (loginUser != null && questionSubmit.getUserId().equals(loginUser.getId())) {
+            questionSubmitVO.setCode(questionSubmit.getCode());
+        } else {
             questionSubmitVO.setCode(null);
+        }
+
         // 1. 关联查询用户信息
         Long userId = questionSubmit.getUserId();
         User user = null;
@@ -162,14 +174,16 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         }
         UserVO userVO = userService.getUserVO(user);
         questionSubmitVO.setUserVO(userVO);
+        
         // 2. 关联查询题目信息
         Long questionId = questionSubmit.getQuestionId();
         Question question = null;
         if (questionId != null && questionId > 0) {
             question = questionService.getById(questionId);
         }
-        QuestionVO questionVO = questionService.getQuestionVO(question, request);
+        QuestionVO questionVO = questionService.getQuestionVO(question);
         questionSubmitVO.setQuestionVO(questionVO);
+        
         return questionSubmitVO;
     }
 

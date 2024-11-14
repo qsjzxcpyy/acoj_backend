@@ -8,23 +8,29 @@ import java.util.stream.Collectors;
 
 /**
  * 题目提交状态枚举
- *
- *
  */
 public enum QuestionSubmitStatusEnum {
-//0 未测评 1 正在测评 2 测评成功 3 测评失败
-    WAITTING("等待中", 0),
-    RUNNING("评测中",  1),
-    SUCCEED("测评成功",  2),
-    FAILED("测评失败", 3);
-
-    private final String text;
+    
+    WAITING(0, "待判题"),
+    RUNNING(1, "判题中"),
+    ACCEPTED(2, "通过"),
+    WRONG_ANSWER(3, "答案错误"),
+    COMPILE_ERROR(4, "编译错误"),
+    TIME_LIMIT_EXCEEDED(5, "超时"),
+    MEMORY_LIMIT_EXCEEDED(6, "内存超限"),
+    PRESENTATION_ERROR(7, "展示错误"),
+    OUTPUT_LIMIT_EXCEEDED(8, "输出超限"),
+    DANGEROUS_OPERATION(9, "危险操作"),
+    RUNTIME_ERROR(10, "运行错误"),
+    SYSTEM_ERROR(11, "系统错误");
 
     private final Integer value;
 
-    QuestionSubmitStatusEnum(String text, Integer value) {
-        this.text = text;
+    private final String text;
+
+    QuestionSubmitStatusEnum(Integer value, String text) {
         this.value = value;
+        this.text = text;
     }
 
     /**

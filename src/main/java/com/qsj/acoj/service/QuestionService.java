@@ -8,6 +8,7 @@ import com.qsj.acoj.model.entity.Question;
 import com.qsj.acoj.model.vo.QuestionVO;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * 题目服务
@@ -40,7 +41,7 @@ public interface QuestionService extends IService<Question> {
      * @param request
      * @return
      */
-    QuestionVO getQuestionVO(Question question, HttpServletRequest request);
+    QuestionVO getQuestionVO(Question question);
 
     /**
      * 分页获取题目封装
@@ -50,4 +51,12 @@ public interface QuestionService extends IService<Question> {
      * @return
      */
     Page<QuestionVO> getQuestionVOPage(Page<Question> questionPage, HttpServletRequest request);
+
+    /**
+     * 获取题目列表
+     *
+     * @param contestId
+     * @return
+     */
+    List<QuestionVO> getQuestionsByContestId(Long contestId);
 }

@@ -126,10 +126,13 @@ public class AiQuestionChatServiceImp extends ServiceImpl<AiQuestionChatMapper, 
         LambdaQueryWrapper<AiQuestionChat> wrapper = Wrappers.<AiQuestionChat>lambdaQuery().eq(AiQuestionChat::getUserId, loginUser.getId())
                 .ge(AiQuestionChat::getCreateTime, twoDaysAgo);
 
-        return this.list(wrapper);
+        List<AiQuestionChat> aiQuestionChats = this.list(wrapper);
+            System.out.println("aiQuestionChats = " + aiQuestionChats);
+        return aiQuestionChats;
 
 
     }
 }
 
 
+    

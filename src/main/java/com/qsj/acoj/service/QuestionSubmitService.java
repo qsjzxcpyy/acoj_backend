@@ -24,9 +24,9 @@ import javax.servlet.http.HttpServletResponse;
 */
 public interface QuestionSubmitService extends IService<QuestionSubmit> {
     /**
-     * 点赞
+     * 题目提交
      *
-     * @param questionSubmitAddRequest
+     * @param questionSubmitAddRequest 题目提交信息
      * @param loginUser
      * @return
      */

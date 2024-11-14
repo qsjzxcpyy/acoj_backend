@@ -1,6 +1,7 @@
 package com.qsj.acoj.controller;
 
 import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.qsj.acoj.annotation.AuthCheck;
 import com.qsj.acoj.common.BaseResponse;
@@ -12,20 +13,21 @@ import com.qsj.acoj.constant.UserConstant;
 import com.qsj.acoj.convert.QuestionConvert;
 import com.qsj.acoj.exception.BusinessException;
 import com.qsj.acoj.exception.ThrowUtils;
+import com.qsj.acoj.judge.codesandbox.model.JudgeInfo;
+import com.qsj.acoj.mapper.ContestParticipantMapper;
+import com.qsj.acoj.mapper.ContestProblemMapper;
+import com.qsj.acoj.mapper.ContestRankMapper;
+import com.qsj.acoj.mapper.ContestSubmissionMapper;
 import com.qsj.acoj.model.dto.question.*;
 import com.qsj.acoj.model.dto.questionsubmit.QuestionSubmitAddRequest;
 import com.qsj.acoj.model.dto.questionsubmit.QuestionSubmitQueryRequest;
-import com.qsj.acoj.model.entity.AiQuestionChat;
-import com.qsj.acoj.model.entity.Question;
-import com.qsj.acoj.model.entity.QuestionSubmit;
+import com.qsj.acoj.model.entity.*;
+import com.qsj.acoj.model.enums.JudgeInfoMessageEnum;
 import com.qsj.acoj.model.vo.AiChatRecordVo;
 import com.qsj.acoj.model.vo.LoginUserVO;
 import com.qsj.acoj.model.vo.QuestionSubmitVO;
 import com.qsj.acoj.model.vo.QuestionVO;
-import com.qsj.acoj.service.AiQuestionChatService;
-import com.qsj.acoj.service.QuestionService;
-import com.qsj.acoj.service.QuestionSubmitService;
-import com.qsj.acoj.service.UserService;
+import com.qsj.acoj.service.*;
 import com.qsj.acoj.utils.RequestTokenUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -36,7 +38,12 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotEmpty;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 题目接口
@@ -57,11 +64,25 @@ public class QuestionController {
     @Resource
     private AiQuestionChatService aiQuestionChatService;
 
+    @Resource
+    private ContestService contestService;
+
+    @Resource
+    private ContestParticipantMapper contestParticipantMapper;
+
+    @Resource
+    private ContestProblemMapper contestProblemMapper;
+
+    @Resource
+    private ContestSubmissionMapper contestSubmissionMapper;
+
+    @Resource
+    private ContestRankMapper contestRankMapper;
+
     // region 增删改查
 
     /**
      * 创建
-     *
      */
     @PostMapping("/add")
     public BaseResponse<Long> addQuestion(@RequestBody QuestionAddRequest questionAddRequest, HttpServletRequest request) {
@@ -93,7 +114,6 @@ public class QuestionController {
 
     /**
      * 删除
-     *
      */
     @PostMapping("/delete")
     public BaseResponse<Boolean> deleteQuestion(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
@@ -102,7 +122,7 @@ public class QuestionController {
         }
         LoginUserVO user = userService.getLoginUser(request);
         long id = deleteRequest.getId();
-        // 判断是否存在
+        // 判断是存在
         Question oldQuestion = questionService.getById(id);
         ThrowUtils.throwIf(oldQuestion == null, ErrorCode.NOT_FOUND_ERROR);
         // 仅本人或管理员可删除
@@ -115,7 +135,6 @@ public class QuestionController {
 
     /**
      * 更新（仅管理员）
-     *
      */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
@@ -148,7 +167,6 @@ public class QuestionController {
 
     /**
      * 根据 id 获取question
-     *
      */
     @GetMapping("/get")
     public BaseResponse<Question> getQuestionById(long id, HttpServletRequest request) {
@@ -169,10 +187,9 @@ public class QuestionController {
 
     /**
      * 根据 id 获取脱敏question
-     *
      */
     @GetMapping("/get/vo")
-    public BaseResponse<QuestionVO> getQuestionVOById(long id, HttpServletRequest request) {
+    public BaseResponse<QuestionVO> getQuestionVOById(long id) {
         if (id <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
@@ -180,12 +197,11 @@ public class QuestionController {
         if (question == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR);
         }
-        return ResultUtils.success(questionService.getQuestionVO(question, request));
+        return ResultUtils.success(questionService.getQuestionVO(question));
     }
 
     /**
      * 分页获取列表（仅管理员）
-     *
      */
     @PostMapping("/list/page")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
@@ -216,7 +232,6 @@ public class QuestionController {
 
     /**
      * 分页获取当前用户创建的资源列表
-     *
      */
     @PostMapping("/my/list/page/vo")
     public BaseResponse<Page<QuestionVO>> listMyQuestionVOByPage(@RequestBody QuestionQueryRequest questionQueryRequest,
@@ -240,7 +255,6 @@ public class QuestionController {
 
     /**
      * 编辑（题目）
-     *
      */
     @PostMapping("/edit")
     public BaseResponse<Boolean> editQuestion(@RequestBody QuestionEditRequest questionEditRequest, HttpServletRequest request) {
@@ -278,32 +292,143 @@ public class QuestionController {
     /**
      * 题目提交
      *
-     * @return resultNum 本次提交变化数
+     * @param questionSubmitAddRequest
+     * @param contestId 比赛ID（可选）
+     * @param request
+     * @return
      */
-    @PostMapping("/question_submit/do")
-    public BaseResponse<QuestionSubmitResp> doQuestionSubmit(@RequestBody QuestionSubmitAddRequest questionSubmitAddRequest,
-                                                             HttpServletRequest request, HttpServletResponse response) {
-         LoginUserVO loginUser = userService.getLoginUser(request);
+    @PostMapping("/submit")
+    public BaseResponse<QuestionSubmitResp> doQuestionSubmit(
+            @RequestBody QuestionSubmitAddRequest questionSubmitAddRequest,
+            @RequestParam(required = false) Long contestId,
+            HttpServletRequest request) {
         if (questionSubmitAddRequest == null || questionSubmitAddRequest.getQuestionId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
-        String token = request.getHeader(QuestionConstant.REQUEST_TOKEN);
-        System.out.println("前端携带的请求token: " + token);
-        if (token == null || token.isEmpty()) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "调用接口未生成token");
+        // 登录才能提交
+        final LoginUserVO loginUser = userService.getLoginUser(request);
+        if (loginUser == null) {
+            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
 
-        if (!RequestTokenUtils.verify(token)) {
-            throw new BusinessException(ErrorCode.OPERATION_ERROR, "提交频繁，请稍后重试");
+        // 如果是比赛提交，进行比赛相关检查
+        if (contestId != null && contestId > 0) {
+            Contest contest = contestService.getById(contestId);
+            if (contest == null) {
+                throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "比赛不存在");
+            }
+            // 检查比赛时间
+            LocalDateTime now = LocalDateTime.now();
+            if (now.isBefore(contest.getStartTime())) {
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "比赛尚未开始");
+            }
+            if (now.isAfter(contest.getEndTime())) {
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "比赛已结束");
+            }
+            // 检查是否已报名
+            QueryWrapper<ContestParticipant> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("contestId", contestId);
+            queryWrapper.eq("userId", loginUser.getId());
+            if (!contestParticipantMapper.exists(queryWrapper)) {
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "未报名比赛");
+            }
+            // 检查题目是否属于该比赛
+            QueryWrapper<ContestProblem> problemQueryWrapper = new QueryWrapper<>();
+            problemQueryWrapper.eq("contestId", contestId);
+            problemQueryWrapper.eq("problemId", questionSubmitAddRequest.getQuestionId());
+            if (!contestProblemMapper.exists(problemQueryWrapper)) {
+                throw new BusinessException(ErrorCode.OPERATION_ERROR, "该题目不属于当前比赛");
+            }
         }
-        // 登录才能提交
-        QuestionSubmitResp questionSubmitResp = questionSubmitService.doQuestionSubmit(questionSubmitAddRequest, loginUser);
-        return ResultUtils.success(questionSubmitResp);
+
+        QuestionSubmitResp result = questionSubmitService.doQuestionSubmit(questionSubmitAddRequest, loginUser);
+        
+        // 如果是比赛提交，更新比赛排名
+        if (contestId != null && contestId > 0) {
+            // 使用ScheduledExecutorService延迟1.5秒后执行
+            ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+            executor.schedule(() -> {
+                try {
+                    // 获取判题结果
+                    QuestionSubmit questionSubmit = questionSubmitService.getById(result.getQuestionSubmitId());
+                    String judgeInfoStr = questionSubmit.getJudgeInfo();
+                    JudgeInfo judgeInfo = JSONUtil.toBean(judgeInfoStr, JudgeInfo.class);
+                    
+                    // 更新比赛排名表
+                    QueryWrapper<ContestRank> rankQueryWrapper = new QueryWrapper<>();
+                    rankQueryWrapper.eq("contestId", contestId)
+                            .eq("participantId", loginUser.getId());
+                    ContestRank contestRank = contestRankMapper.selectOne(rankQueryWrapper);
+
+                    if (contestRank == null) {
+                        // 第一次提交，创建排名记录
+                        contestRank = new ContestRank();
+                        contestRank.setContestId(contestId);
+                        contestRank.setParticipantId(loginUser.getId());
+                        contestRank.setTotalScore(0);
+                        contestRank.setTotalTime(0);
+                        contestRank.setPenaltyTime(0);
+                        contestRank.setSolvedProblems(0);
+                    }
+
+                    // 判断是否通过
+                    if (judgeInfo.getMessage().equals(JudgeInfoMessageEnum.ACCEPTED.getText())) {
+                        // 查询该题目在本次比赛中的提交记录
+                        QueryWrapper<ContestSubmission> contestSubmissionQueryWrapper = new QueryWrapper<>();
+                        contestSubmissionQueryWrapper.eq("contestId", contestId)
+                                .eq("problemId", questionSubmitAddRequest.getQuestionId());
+                        List<ContestSubmission> contestSubmissions = contestSubmissionMapper.selectList(contestSubmissionQueryWrapper);
+                        
+                        boolean isFirstAccepted = true;
+                        for (ContestSubmission submission : contestSubmissions) {
+                            QuestionSubmit prevSubmit = questionSubmitService.getById(submission.getSubmissionId());
+                            String prevJudgeInfoStr = prevSubmit.getJudgeInfo();
+                            JudgeInfo prevJudgeInfo = JSONUtil.toBean(prevJudgeInfoStr, JudgeInfo.class);
+                            if (prevJudgeInfo.getMessage().equals(JudgeInfoMessageEnum.ACCEPTED.getText())) {
+                                isFirstAccepted = false;
+                                break;
+                            }
+                        }
+                        
+                        if (isFirstAccepted) {  // 首次通过
+                            contestRank.setSolvedProblems(contestRank.getSolvedProblems() + 1);
+                            // 计算本题提交时间（从比赛开始到现在的分钟数）
+                            Contest contest = contestService.getById(contestId);
+                            long submissionTimeMinutes = Duration.between(contest.getStartTime(), LocalDateTime.now()).toMinutes();
+                            // 累加到总用时
+                            contestRank.setTotalTime(contestRank.getTotalTime() + (int)submissionTimeMinutes);
+                            // 更新总分（每道题1分）
+                            contestRank.setTotalScore(contestRank.getTotalScore() + 1);
+                        }
+                    } else {
+                        // 未通过，增加罚时
+                        contestRank.setPenaltyTime(contestRank.getPenaltyTime() + 5);
+                    }
+
+                    // 保存或更新排名记录
+                    if (contestRank.getId() == null) {
+                        contestRankMapper.insert(contestRank);
+                    } else {
+                        contestRankMapper.updateById(contestRank);
+                    }
+
+                    // 记录��交关系
+                    ContestSubmission contestSubmission = new ContestSubmission();
+                    contestSubmission.setSubmissionId(result.getQuestionSubmitId());
+                    contestSubmission.setContestId(contestId);
+                    contestSubmission.setProblemId(questionSubmitAddRequest.getQuestionId());
+                    contestSubmissionMapper.insert(contestSubmission);
+                } finally {
+                    executor.shutdown();
+                }
+            }, 1000, TimeUnit.MILLISECONDS);
+        }
+
+        return ResultUtils.success(result);
     }
 
     /**
      * 分页获取提交题目状态，
-     *
      */
     @PostMapping("/question_submit/list/page")
     public BaseResponse<Page<QuestionSubmitVO>> listQuestionSubmitByPage(@RequestBody QuestionSubmitQueryRequest questionSubmitQueryRequest,
@@ -323,14 +448,16 @@ public class QuestionController {
     }
 
     @PostMapping("/get/chat/response")
-    public BaseResponse<String> getChatResponse(@NotEmpty @RequestBody  String question,HttpServletRequest request) throws IOException {
-        return ResultUtils.success(aiQuestionChatService.getChatResponse(question,request));
+    public BaseResponse<String> getChatResponse(@NotEmpty @RequestBody String question, HttpServletRequest request) throws IOException {
+        return ResultUtils.success(aiQuestionChatService.getChatResponse(question, request));
     }
 
     @GetMapping("/get/chat/record")
     public BaseResponse<List<AiChatRecordVo>> getChatRecord(HttpServletRequest request) {
         List<AiQuestionChat> aiQuestionChats = aiQuestionChatService.listTopQuestionChat(request);
-        return ResultUtils.success( QuestionConvert.INSTANCE.mapTo(aiQuestionChats));
+        List<AiChatRecordVo> s = QuestionConvert.INSTANCE.mapTo(aiQuestionChats);
+        System.out.println("s = " + s);
+        return ResultUtils.success(QuestionConvert.INSTANCE.mapTo(aiQuestionChats));
     }
 
 }

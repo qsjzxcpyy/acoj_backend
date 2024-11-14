@@ -63,7 +63,7 @@ public class JudgeSeviceImpl implements JudgeService {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "题目信息不存在");
         }
         //判断该判题任务是否已经在评测
-        if (!QuestionSubmitStatusEnum.WAITTING.getValue().equals(questionSubmit.getStatus())) {
+        if (!QuestionSubmitStatusEnum.WAITING.getValue().equals(questionSubmit.getStatus())) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "题目正在评测中~");
         }
 
@@ -114,7 +114,7 @@ public class JudgeSeviceImpl implements JudgeService {
 
         //设置题目判题情况，设置判题状态
         questionSubmitUpdate = new QuestionSubmit();
-        questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.SUCCEED.getValue());
+        questionSubmitUpdate.setStatus(QuestionSubmitStatusEnum.ACCEPTED.getValue());
         questionSubmitUpdate.setId(questionSubmitId);
         String finalJudgeInfoStr = JSONUtil.toJsonStr(finalJudgeInfo);
         questionSubmitUpdate.setJudgeInfo(finalJudgeInfoStr);

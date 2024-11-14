@@ -20,7 +20,7 @@ public class ExampleCodeSandboxImpl implements CodeSandbox {
 
         executeCodeResponse.setOutputList(intputList);
         executeCodeResponse.setMessage("测试沙箱代码运行完成");
-        executeCodeResponse.setStatue(QuestionSubmitStatusEnum.SUCCEED.getValue());
+//        executeCodeResponse.setStatue(QuestionSubmitStatusEnum.SUCCEED.getValue());
 
         JudgeInfo judgeInfo = new JudgeInfo();
         judgeInfo.setMessage(JudgeInfoMessageEnum.ACCEPTED.getText());

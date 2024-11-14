@@ -119,7 +119,7 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
 
 
     @Override
-    public QuestionVO getQuestionVO(Question question, HttpServletRequest request) {
+    public QuestionVO getQuestionVO(Question question) {
         QuestionVO questionVO = QuestionVO.objToVo(question);
         // 1. 关联查询用户信息
         Long userId = question.getUserId();
@@ -156,6 +156,14 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
         }).collect(Collectors.toList());
         questionVOPage.setRecords(questionVOList);
         return questionVOPage;
+    }
+
+    @Override
+    public List<QuestionVO> getQuestionsByContestId(Long contestId) {
+        // Join contest_problem table with question table
+        List<Question> questionList = baseMapper.selectList(new QueryWrapper<Question>()
+            .inSql("id", "SELECT problemId FROM contest_problem WHERE contestId = " + contestId ));
+        return questionList.stream().map(question -> this.getQuestionVO(question)).collect(Collectors.toList());
     }
 }
 
