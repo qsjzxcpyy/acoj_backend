@@ -15,10 +15,14 @@ import java.util.List;
 @Mapper
 public interface QuestionConvert {
     QuestionConvert INSTANCE = Mappers.getMapper(QuestionConvert.class);
-    // 单个对象映射方法
-    AiChatRecordVo map(AiQuestionChat aiQuestionChat)   ;
 
-    // AiQuestionChat 转换 AiQuestionChatVO
-    public List<AiChatRecordVo> mapTo(List<AiQuestionChat> aiQuestionChat);
+    /**
+     * 将AiQuestionChat列表转换为AiChatRecordVo列表
+     */
+    List<AiChatRecordVo> mapTo(List<AiQuestionChat> aiQuestionChats);
 
+    /**
+     * 将单个AiQuestionChat转换为AiChatRecordVo
+     */
+    AiChatRecordVo mapTo(AiQuestionChat aiQuestionChat);
 }

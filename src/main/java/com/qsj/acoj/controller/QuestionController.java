@@ -293,7 +293,7 @@ public class QuestionController {
      * 题目提交
      *
      * @param questionSubmitAddRequest
-     * @param contestId 比赛ID（可选）
+     * @param contestId                比赛ID（可选）
      * @param request
      * @return
      */
@@ -309,6 +309,10 @@ public class QuestionController {
         final LoginUserVO loginUser = userService.getLoginUser(request);
         if (loginUser == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+        }
+
+        if (questionSubmitAddRequest.getCode() == null || questionSubmitAddRequest.getCode().trim().length() == 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "代码不能为空");
         }
 
         // 如果是比赛提交，进行比赛相关检查
@@ -342,7 +346,7 @@ public class QuestionController {
         }
 
         QuestionSubmitResp result = questionSubmitService.doQuestionSubmit(questionSubmitAddRequest, loginUser);
-        
+
         // 如果是比赛提交，更新比赛排名
         if (contestId != null && contestId > 0) {
             // 使用ScheduledExecutorService延迟1.5秒后执行
@@ -353,7 +357,7 @@ public class QuestionController {
                     QuestionSubmit questionSubmit = questionSubmitService.getById(result.getQuestionSubmitId());
                     String judgeInfoStr = questionSubmit.getJudgeInfo();
                     JudgeInfo judgeInfo = JSONUtil.toBean(judgeInfoStr, JudgeInfo.class);
-                    
+
                     // 更新比赛排名表
                     QueryWrapper<ContestRank> rankQueryWrapper = new QueryWrapper<>();
                     rankQueryWrapper.eq("contestId", contestId)
@@ -378,31 +382,49 @@ public class QuestionController {
                         contestSubmissionQueryWrapper.eq("contestId", contestId)
                                 .eq("problemId", questionSubmitAddRequest.getQuestionId());
                         List<ContestSubmission> contestSubmissions = contestSubmissionMapper.selectList(contestSubmissionQueryWrapper);
-                        
+
                         boolean isFirstAccepted = true;
                         for (ContestSubmission submission : contestSubmissions) {
                             QuestionSubmit prevSubmit = questionSubmitService.getById(submission.getSubmissionId());
                             String prevJudgeInfoStr = prevSubmit.getJudgeInfo();
                             JudgeInfo prevJudgeInfo = JSONUtil.toBean(prevJudgeInfoStr, JudgeInfo.class);
-                            if (prevJudgeInfo.getMessage().equals(JudgeInfoMessageEnum.ACCEPTED.getText())) {
+                            if (prevJudgeInfo.getMessage().equals(JudgeInfoMessageEnum.ACCEPTED.getText()) &&
+                                    prevSubmit.getUserId().equals(loginUser.getId())) {
                                 isFirstAccepted = false;
                                 break;
                             }
                         }
-                        
+
                         if (isFirstAccepted) {  // 首次通过
                             contestRank.setSolvedProblems(contestRank.getSolvedProblems() + 1);
                             // 计算本题提交时间（从比赛开始到现在的分钟数）
                             Contest contest = contestService.getById(contestId);
                             long submissionTimeMinutes = Duration.between(contest.getStartTime(), LocalDateTime.now()).toMinutes();
                             // 累加到总用时
-                            contestRank.setTotalTime(contestRank.getTotalTime() + (int)submissionTimeMinutes);
+                            contestRank.setTotalTime(contestRank.getTotalTime() + (int) submissionTimeMinutes);
                             // 更新总分（每道题1分）
                             contestRank.setTotalScore(contestRank.getTotalScore() + 1);
                         }
                     } else {
-                        // 未通过，增加罚时
-                        contestRank.setPenaltyTime(contestRank.getPenaltyTime() + 5);
+                        // 未通过，检查是否已有通过记录
+                        QueryWrapper<ContestSubmission> contestSubmissionQueryWrapper = new QueryWrapper<>();
+                        contestSubmissionQueryWrapper.eq("contestId", contestId)
+                                .eq("problemId", questionSubmitAddRequest.getQuestionId());
+                        List<ContestSubmission> contestSubmissions = contestSubmissionMapper.selectList(contestSubmissionQueryWrapper);
+
+                        boolean hasAccepted = contestSubmissions.stream()
+                                .anyMatch(submission -> {
+                                    QuestionSubmit prevSubmit = questionSubmitService.getById(submission.getSubmissionId());
+                                    String prevJudgeInfoStr = prevSubmit.getJudgeInfo();
+                                    JudgeInfo prevJudgeInfo = JSONUtil.toBean(prevJudgeInfoStr, JudgeInfo.class);
+                                    return prevJudgeInfo.getMessage().equals(JudgeInfoMessageEnum.ACCEPTED.getText()) &&
+                                            prevSubmit.getUserId().equals(loginUser.getId());
+                                });
+
+                        // 只有在未通过且没有成功记录时才增加罚时
+                        if (!hasAccepted) {
+                            contestRank.setPenaltyTime(contestRank.getPenaltyTime() + 5);
+                        }
                     }
 
                     // 保存或更新排名记录
@@ -412,7 +434,7 @@ public class QuestionController {
                         contestRankMapper.updateById(contestRank);
                     }
 
-                    // 记录��交关系
+                    // 记录交关系
                     ContestSubmission contestSubmission = new ContestSubmission();
                     contestSubmission.setSubmissionId(result.getQuestionSubmitId());
                     contestSubmission.setContestId(contestId);
@@ -455,9 +477,9 @@ public class QuestionController {
     @GetMapping("/get/chat/record")
     public BaseResponse<List<AiChatRecordVo>> getChatRecord(HttpServletRequest request) {
         List<AiQuestionChat> aiQuestionChats = aiQuestionChatService.listTopQuestionChat(request);
-        List<AiChatRecordVo> s = QuestionConvert.INSTANCE.mapTo(aiQuestionChats);
-        System.out.println("s = " + s);
-        return ResultUtils.success(QuestionConvert.INSTANCE.mapTo(aiQuestionChats));
+        List<AiChatRecordVo> recordVos = QuestionConvert.INSTANCE.mapTo(aiQuestionChats);
+        System.out.println("recordVos = " + recordVos);
+        return ResultUtils.success(recordVos);
     }
 
 }

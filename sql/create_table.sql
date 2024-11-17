@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS contest
     description  TEXT COMMENT '比赛描述',
     startTime    DATETIME NOT NULL COMMENT '比赛开始时间',
     endTime      DATETIME NOT NULL COMMENT '比赛结束时间',
-    status       ENUM('1', '2', '3') DEFAULT '1' NOT NULL COMMENT '比赛状态',
+    status       ENUM('pending', 'ongoing', 'completed') DEFAULT 'pending' NOT NULL COMMENT '比赛状态',
     userId       BIGINT NOT NULL COMMENT '创建者id',
     createTime   DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
     updateTime   DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',

@@ -301,7 +301,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public LoginUserVO getLoginUser(HttpServletRequest request) {
         String accessToken = request.getHeader(TokenConstant.HEADER_ACCESS_TOKEN);
         if (accessToken == null) {
-            throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
+            throw  new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
         AccessToken accessToken1 = redisTokenUtils.get(accessToken);
         if (accessToken1 == null) {

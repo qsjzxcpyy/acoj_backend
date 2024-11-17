@@ -17,6 +17,7 @@ public class ContestSubmission implements Serializable {
     private Long contestId;
     
     private Long problemId;
+
     
     private static final long serialVersionUID = 1L;
 } 

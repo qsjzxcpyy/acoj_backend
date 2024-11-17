@@ -9,12 +9,11 @@ import com.qsj.acoj.constant.CommonConstant;
 import com.qsj.acoj.constant.QuestionConstant;
 import com.qsj.acoj.exception.BusinessException;
 import com.qsj.acoj.judge.JudgeService;
+import com.qsj.acoj.mapper.ContestSubmissionMapper;
 import com.qsj.acoj.model.dto.question.QuestionSubmitResp;
 import com.qsj.acoj.model.dto.questionsubmit.QuestionSubmitAddRequest;
 import com.qsj.acoj.model.dto.questionsubmit.QuestionSubmitQueryRequest;
-import com.qsj.acoj.model.entity.Question;
-import com.qsj.acoj.model.entity.QuestionSubmit;
-import com.qsj.acoj.model.entity.User;
+import com.qsj.acoj.model.entity.*;
 import com.qsj.acoj.model.enums.QuestionSubmitLanguageEnum;
 import com.qsj.acoj.model.enums.QuestionSubmitStatusEnum;
 import com.qsj.acoj.model.vo.LoginUserVO;
@@ -36,6 +35,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -61,6 +61,9 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
     @Resource
     private ContestService contestService;
 
+    @Resource
+    private ContestSubmissionMapper contestSubmissionMapper;
+
     /**
      * 题目提交
      *
@@ -81,7 +84,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         if (languageEnum == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "编程语言错误");
         }
-        if (loginUser == null){
+        if (loginUser == null) {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
 
@@ -156,15 +159,6 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
     @Override
     public QuestionSubmitVO getQuestionSubmitVO(QuestionSubmit questionSubmit, HttpServletRequest request) {
         QuestionSubmitVO questionSubmitVO = QuestionSubmitVO.objToVo(questionSubmit);
-        
-        // 获取当前登录用户
-        LoginUserVO loginUser = userService.getLoginUser(request);
-        // 如果是自己的提交，则可以看到代码
-        if (loginUser != null && questionSubmit.getUserId().equals(loginUser.getId())) {
-            questionSubmitVO.setCode(questionSubmit.getCode());
-        } else {
-            questionSubmitVO.setCode(null);
-        }
 
         // 1. 关联查询用户信息
         Long userId = questionSubmit.getUserId();
@@ -174,7 +168,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         }
         UserVO userVO = userService.getUserVO(user);
         questionSubmitVO.setUserVO(userVO);
-        
+
         // 2. 关联查询题目信息
         Long questionId = questionSubmit.getQuestionId();
         Question question = null;
@@ -183,7 +177,54 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         }
         QuestionVO questionVO = questionService.getQuestionVO(question);
         questionSubmitVO.setQuestionVO(questionVO);
-        
+
+        // 检查这次提交是否是比赛提交
+        QueryWrapper<ContestSubmission> submitQueryWrapper = new QueryWrapper<>();
+        submitQueryWrapper.eq("submissionId", questionSubmit.getId());
+        ContestSubmission contestSubmission = contestSubmissionMapper.selectOne(submitQueryWrapper);
+
+        questionSubmitVO.setCode(questionSubmit.getCode());
+
+        LoginUserVO loginUserVO = null;
+        try {
+            loginUserVO = userService.getLoginUser(request);
+        } catch (BusinessException e) {
+            // 完全处理异常，不让它继续传播
+            log.warn("用户未登录: " + e.getMessage());
+            // 未登录时的处理逻辑
+            if (contestSubmission != null) {
+                Contest contest = contestService.getById(contestSubmission.getContestId());
+                if (contest != null) {
+                    LocalDateTime now = LocalDateTime.now();
+                    // 如果在比赛时间内，不返回代码
+                    if (now.isAfter(contest.getStartTime()) && now.isBefore(contest.getEndTime())) {
+                        questionSubmitVO.setCode(null);
+                    }
+                }
+            }
+            // 直接返回处理结果，不抛出异常
+            return questionSubmitVO;
+        } catch (Exception e) {
+            // 处理其他异常
+            log.error("获取用户信息时发生系统异常", e);
+            // 同样不抛出异常，而是返回处理结果
+            questionSubmitVO.setCode(null);
+            return questionSubmitVO;
+        }
+
+        // 如果是比赛提交，检查比赛是否正在进行中
+        if (contestSubmission != null) {
+            Contest contest = contestService.getById(contestSubmission.getContestId());
+            if (contest != null) {
+                LocalDateTime now = LocalDateTime.now();
+                // 如果在比赛时间内，不返回代码
+                if (now.isAfter(contest.getStartTime()) && now.isBefore(contest.getEndTime())
+                        && !loginUserVO.getId().equals(questionSubmit.getUserId())) {
+                    questionSubmitVO.setCode(null);
+                }
+            }
+        }
+
         return questionSubmitVO;
     }
 
@@ -202,7 +243,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         }
         // 填充信息
         List<QuestionSubmitVO> questionSubmitVOList = questionSubmitList.stream().map(questionSubmit -> {
-            return getQuestionSubmitVO(questionSubmit,request);
+            return getQuestionSubmitVO(questionSubmit, request);
         }).collect(Collectors.toList());
         questionSubmitVOPage.setRecords(questionSubmitVOList);
         return questionSubmitVOPage;

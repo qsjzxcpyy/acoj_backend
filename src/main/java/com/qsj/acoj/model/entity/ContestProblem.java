@@ -41,6 +41,5 @@ public class ContestProblem implements Serializable {
      */
     private Integer problemOrder;
 
-    @TableField(exist = false)
     private static final long serialVersionUID = 1L;
 } 

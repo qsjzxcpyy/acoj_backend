@@ -1,6 +1,7 @@
 package com.qsj.acoj.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -8,38 +9,51 @@ import com.qsj.acoj.common.ErrorCode;
 import com.qsj.acoj.constant.CommonConstant;
 import com.qsj.acoj.exception.BusinessException;
 import com.qsj.acoj.exception.ThrowUtils;
+import com.qsj.acoj.mapper.ContestProblemMapper;
 import com.qsj.acoj.model.dto.question.QuestionQueryRequest;
 import com.qsj.acoj.model.entity.*;
 import com.qsj.acoj.model.vo.QuestionVO;
 import com.qsj.acoj.model.vo.UserVO;
+import com.qsj.acoj.service.ContestService;
 import com.qsj.acoj.service.QuestionService;
 import com.qsj.acoj.mapper.QuestionMapper;
 import com.qsj.acoj.service.UserService;
 import com.qsj.acoj.utils.SqlUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
-* @author qsj
-* @description 针对表【question(题目)】的数据库操作Service实现
-* @createDate 2024-03-09 16:18:58
-*/
+ * @author qsj
+ * @description 针对表【question(题目)】的数据库操作Service实现
+ * @createDate 2024-03-09 16:18:58
+ */
 @Service
 public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
-    implements QuestionService{
+        implements QuestionService {
 
     @Resource
     private UserService userService;
 
+    @Resource
+    @Lazy
+    private ContestService contestService;
+
+    @Resource
+    private ContestProblemMapper contestProblemMapper;
+
 
     /**
      * 检验题目是否合法
+     *
      * @param question
      * @param add
      */
@@ -117,10 +131,36 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
     }
 
 
-
     @Override
     public QuestionVO getQuestionVO(Question question) {
+        if (question == null) {
+            return null;
+        }
         QuestionVO questionVO = QuestionVO.objToVo(question);
+
+        // 检查题目是否在进行中的比赛中
+        LocalDateTime now = LocalDateTime.now();
+        QueryWrapper<Contest> contestQueryWrapper = new QueryWrapper<>();
+        contestQueryWrapper.le("startTime", now)  // 开始时间小于等于当前时间
+                .gt("endTime", now)  // 结束时间大于当前时间
+                .eq("isDelete", false);
+        List<Contest> ongoingContests = contestService.list(contestQueryWrapper);
+
+        if (!ongoingContests.isEmpty()) {
+            List<Long> contestIds = ongoingContests.stream()
+                    .map(Contest::getId)
+                    .collect(Collectors.toList());
+
+            QueryWrapper<ContestProblem> problemQueryWrapper = new QueryWrapper<>();
+            problemQueryWrapper.eq("problemId", question.getId())
+                    .in("contestId", contestIds);
+
+            // 如果题目在进行中的比赛中，不返回答案
+            if (contestProblemMapper.exists(problemQueryWrapper)) {
+                questionVO.setAnswer("");
+            }
+        }
+
         // 1. 关联查询用户信息
         Long userId = question.getUserId();
         User user = null;
@@ -162,7 +202,7 @@ public class QuestionServiceImpl extends ServiceImpl<QuestionMapper, Question>
     public List<QuestionVO> getQuestionsByContestId(Long contestId) {
         // Join contest_problem table with question table
         List<Question> questionList = baseMapper.selectList(new QueryWrapper<Question>()
-            .inSql("id", "SELECT problemId FROM contest_problem WHERE contestId = " + contestId ));
+                .inSql("id", "SELECT problemId FROM contest_problem WHERE contestId = " + contestId));
         return questionList.stream().map(question -> this.getQuestionVO(question)).collect(Collectors.toList());
     }
 }

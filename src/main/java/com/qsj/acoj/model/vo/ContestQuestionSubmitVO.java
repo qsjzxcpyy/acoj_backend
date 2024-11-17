@@ -18,6 +18,11 @@ public class ContestQuestionSubmitVO implements Serializable {
     private Integer problemOrder;
     
     /**
+     * 题目信息
+     */
+    private QuestionVO questionVO;
+    
+    /**
      * 是否通过
      */
     private Boolean accepted;

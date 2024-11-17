@@ -18,6 +18,7 @@ import com.qsj.acoj.model.entity.ContestParticipant;
 import com.qsj.acoj.model.entity.ContestProblem;
 import com.qsj.acoj.model.entity.ContestRank;
 import com.qsj.acoj.model.entity.Question;
+import com.qsj.acoj.model.enums.ContestStatusEnum;
 import com.qsj.acoj.model.vo.ContestVO;
 import com.qsj.acoj.model.vo.ContestQuestionVO;
 import com.qsj.acoj.service.ContestService;
@@ -93,10 +94,29 @@ public class ContestServiceImpl extends ServiceImpl<ContestMapper, Contest> impl
         Long id = contestQueryRequest.getId();
         String name = contestQueryRequest.getTitle();
         String status = contestQueryRequest.getStatus();
-        
+        LocalDateTime now = LocalDateTime.now();
+
         queryWrapper.eq(id != null, "id", id);
         queryWrapper.like(StringUtils.isNotBlank(name), "name", name);
-        queryWrapper.eq(StringUtils.isNotBlank(status), "status", status);
+        
+        // 根据时间判断比赛状态
+        if (StringUtils.isNotBlank(status)) {
+            switch (status) {
+                case "1":  // 未开始
+                    queryWrapper.gt("startTime", now);
+                    break;
+                case "2":  // 进行中
+                    queryWrapper.le("startTime", now)
+                            .gt("endTime", now);
+                    break;
+                case "3":  // 已结束
+                    queryWrapper.le("endTime", now);
+                    break;
+                default:
+                    break;
+            }
+        }
+        
         queryWrapper.eq("isDelete", 0);
         return queryWrapper;
     }
@@ -105,12 +125,12 @@ public class ContestServiceImpl extends ServiceImpl<ContestMapper, Contest> impl
     public ContestVO getContestVO(Contest contest, HttpServletRequest request) {
         ContestVO contestVO = new ContestVO();
         BeanUtils.copyProperties(contest, contestVO);
-        
+
         // 获取创建者信息
         Long userId = contest.getUserId();
         UserVO userVO = userService.getUserVO(userService.getById(userId));
         contestVO.setUserVO(userVO);
-        
+
         // 获取比赛题目列表（按题目顺序排序）
         QueryWrapper<ContestProblem> problemQueryWrapper = new QueryWrapper<>();
         problemQueryWrapper.eq("contestId", contest.getId());
@@ -130,13 +150,13 @@ public class ContestServiceImpl extends ServiceImpl<ContestMapper, Contest> impl
                 })
                 .collect(Collectors.toList());
         contestVO.setProblems(problems);
-        
+
         // 获取参与人数
         QueryWrapper<ContestParticipant> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("contestId", contest.getId());
         long participantCount = contestParticipantMapper.selectCount(queryWrapper);
         contestVO.setParticipantCount((int) participantCount);
-        
+
         // 判断当前用户是否已报名
         LoginUserVO loginUser = userService.getLoginUser(request);
         if (loginUser != null) {
@@ -146,7 +166,7 @@ public class ContestServiceImpl extends ServiceImpl<ContestMapper, Contest> impl
             boolean isRegistered = contestParticipantMapper.exists(participantQueryWrapper);
             contestVO.setIsRegistered(isRegistered);
         }
-        
+
         return contestVO;
     }
 
@@ -167,7 +187,7 @@ public class ContestServiceImpl extends ServiceImpl<ContestMapper, Contest> impl
         // 校验比赛是否存在
         Contest contest = this.getById(contestId);
         if (contest == null) {
-            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "比赛不存在");
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "���赛不存在");
         }
 
         // 校验比赛状态
@@ -222,12 +242,12 @@ public class ContestServiceImpl extends ServiceImpl<ContestMapper, Contest> impl
                     return contestProblem;
                 })
                 .collect(Collectors.toList());
-        
+
         boolean batchSaveResult = contestProblemMapper.insertBatch(contestProblems);
         if (!batchSaveResult) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "添加比赛题目失败");
         }
-        
+
         return true;
     }
 
@@ -281,46 +301,23 @@ public class ContestServiceImpl extends ServiceImpl<ContestMapper, Contest> impl
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "比赛尚未结束");
         }
 
-        // 3. 获取所有参赛者的成绩
+        // 3. 获取所有参赛者的成绩，按照新的排名规则排序
         QueryWrapper<ContestRank> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("contestId", contestId);
-        queryWrapper.orderByDesc("totalScore")  // 首先按总分降序
-                .orderByAsc("totalTime")        // 同分则按总用时升序
-                .orderByAsc("penaltyTime");     // 总用时相同则按罚时升序
+        queryWrapper.eq("contestId", contestId)
+                .orderByDesc("totalScore")    // 首先按总分降序
+                .orderByAsc("penaltyTime")    // 同分则按罚时升序
+                .orderByAsc("totalTime");     // 罚时相同则按总用时升序
         List<ContestRank> ranks = contestRankMapper.selectList(queryWrapper);
 
         // 4. 更新排名
-        int currentRank = 1;
-        Integer lastScore = null;
-        Integer lastTotalTime = null;
-        Integer lastPenaltyTime = null;
-        int sameRankCount = 0;
-
-        for (ContestRank rank : ranks) {
-            // 如果与上一名成绩不同，更新当前排名
-            if (lastScore == null || lastTotalTime == null || lastPenaltyTime == null ||
-                    !lastScore.equals(rank.getTotalScore()) ||
-                    !lastTotalTime.equals(rank.getTotalTime()) ||
-                    !lastPenaltyTime.equals(rank.getPenaltyTime())) {
-                currentRank += sameRankCount;
-                sameRankCount = 1;
-            } else {
-                // 如果成绩相同，保持相同排名
-                sameRankCount++;
-            }
-
-            // 更新排名
-            rank.setContestRank(currentRank);
+        for (int i = 0; i < ranks.size(); i++) {
+            ContestRank rank = ranks.get(i);
+            rank.setContestRank(i + 1);  // 直接使用索引+1作为排名
             contestRankMapper.updateById(rank);
-
-            // 记录当前成绩作为下一次比较
-            lastScore = rank.getTotalScore();
-            lastTotalTime = rank.getTotalTime();
-            lastPenaltyTime = rank.getPenaltyTime();
         }
 
         // 5. 更新比赛状态为已完成
-        contest.setStatus("completed");
+        contest.setStatus(ContestStatusEnum.COMPLETED.getValue());
         return this.updateById(contest);
     }
 
@@ -351,7 +348,7 @@ public class ContestServiceImpl extends ServiceImpl<ContestMapper, Contest> impl
         contest.setDescription(contestUpdateRequest.getDescription());
         contest.setStartTime(contestUpdateRequest.getStartTime());
         contest.setEndTime(contestUpdateRequest.getEndTime());
-        
+
         boolean updateResult = this.updateById(contest);
         if (!updateResult) {
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "更新比赛信息失败");
@@ -363,7 +360,7 @@ public class ContestServiceImpl extends ServiceImpl<ContestMapper, Contest> impl
             // 校验题目ID
             for (ContestProblemRequest question : questions) {
                 if (question == null || StringUtils.isBlank(question.getId())) {
-                    throw new BusinessException(ErrorCode.PARAMS_ERROR, "题目信息不完��");
+                    throw new BusinessException(ErrorCode.PARAMS_ERROR, "题目信息不完");
                 }
                 // 校验题目是否存在
                 Question dbQuestion = questionService.getById(question.getId());
@@ -387,7 +384,7 @@ public class ContestServiceImpl extends ServiceImpl<ContestMapper, Contest> impl
                         return contestProblem;
                     })
                     .collect(Collectors.toList());
-            
+
             boolean batchSaveResult = contestProblemMapper.insertBatch(contestProblems);
             if (!batchSaveResult) {
                 throw new BusinessException(ErrorCode.OPERATION_ERROR, "更新比赛题目失败");
