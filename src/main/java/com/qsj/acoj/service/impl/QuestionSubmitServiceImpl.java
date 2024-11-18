@@ -9,6 +9,7 @@ import com.qsj.acoj.constant.CommonConstant;
 import com.qsj.acoj.constant.QuestionConstant;
 import com.qsj.acoj.exception.BusinessException;
 import com.qsj.acoj.judge.JudgeService;
+import com.qsj.acoj.mapper.ContestProblemMapper;
 import com.qsj.acoj.mapper.ContestSubmissionMapper;
 import com.qsj.acoj.model.dto.question.QuestionSubmitResp;
 import com.qsj.acoj.model.dto.questionsubmit.QuestionSubmitAddRequest;
@@ -62,7 +63,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
     private ContestService contestService;
 
     @Resource
-    private ContestSubmissionMapper contestSubmissionMapper;
+    private ContestProblemMapper contestProblemMapper;
 
     /**
      * 题目提交
@@ -160,7 +161,7 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
     public QuestionSubmitVO getQuestionSubmitVO(QuestionSubmit questionSubmit, HttpServletRequest request) {
         QuestionSubmitVO questionSubmitVO = QuestionSubmitVO.objToVo(questionSubmit);
 
-        // 1. 关联查询用户信息
+              // 1. 关联查询用户信息
         Long userId = questionSubmit.getUserId();
         User user = null;
         if (userId != null && userId > 0) {
@@ -178,53 +179,44 @@ public class QuestionSubmitServiceImpl extends ServiceImpl<QuestionSubmitMapper,
         QuestionVO questionVO = questionService.getQuestionVO(question);
         questionSubmitVO.setQuestionVO(questionVO);
 
-        // 检查这次提交是否是比赛提交
-        QueryWrapper<ContestSubmission> submitQueryWrapper = new QueryWrapper<>();
-        submitQueryWrapper.eq("submissionId", questionSubmit.getId());
-        ContestSubmission contestSubmission = contestSubmissionMapper.selectOne(submitQueryWrapper);
+        // 检查题目是否在进行中的比赛中
+        LocalDateTime now = LocalDateTime.now();
+        QueryWrapper<Contest> contestQueryWrapper = new QueryWrapper<>();
+        contestQueryWrapper.le("startTime", now)  // 开始时间小于等于当前时间
+                .gt("endTime", now)  // 结束时间大于当前时间
+                .eq("isDelete", 0);
+        List<Contest> ongoingContests = contestService.list(contestQueryWrapper);
 
-        questionSubmitVO.setCode(questionSubmit.getCode());
+        if (!ongoingContests.isEmpty()) {
+            List<Long> contestIds = ongoingContests.stream()
+                    .map(Contest::getId)
+                    .collect(Collectors.toList());
 
-        LoginUserVO loginUserVO = null;
-        try {
-            loginUserVO = userService.getLoginUser(request);
-        } catch (BusinessException e) {
-            // 完全处理异常，不让它继续传播
-            log.warn("用户未登录: " + e.getMessage());
-            // 未登录时的处理逻辑
-            if (contestSubmission != null) {
-                Contest contest = contestService.getById(contestSubmission.getContestId());
-                if (contest != null) {
-                    LocalDateTime now = LocalDateTime.now();
-                    // 如果在比赛时间内，不返回代码
-                    if (now.isAfter(contest.getStartTime()) && now.isBefore(contest.getEndTime())) {
-                        questionSubmitVO.setCode(null);
-                    }
+            QueryWrapper<ContestProblem> problemQueryWrapper = new QueryWrapper<>();
+            problemQueryWrapper.eq("problemId", questionSubmit.getQuestionId())
+                    .in("contestId", contestIds);
+
+            // 如果题目在进行中的比赛中
+            if (contestProblemMapper.exists(problemQueryWrapper)) {
+                // 获取当前登录用户
+                LoginUserVO loginUser = null;
+                try {
+                    loginUser = userService.getLoginUser(request);
+                } catch (BusinessException e) {
+                    // 未登录状态，直接设置code为null
+                    questionSubmitVO.setCode(null);
+                    return questionSubmitVO;
                 }
-            }
-            // 直接返回处理结果，不抛出异常
-            return questionSubmitVO;
-        } catch (Exception e) {
-            // 处理其他异常
-            log.error("获取用户信息时发生系统异常", e);
-            // 同样不抛出异常，而是返回处理结果
-            questionSubmitVO.setCode(null);
-            return questionSubmitVO;
-        }
-
-        // 如果是比赛提交，检查比赛是否正在进行中
-        if (contestSubmission != null) {
-            Contest contest = contestService.getById(contestSubmission.getContestId());
-            if (contest != null) {
-                LocalDateTime now = LocalDateTime.now();
-                // 如果在比赛时间内，不返回代码
-                if (now.isAfter(contest.getStartTime()) && now.isBefore(contest.getEndTime())
-                        && !loginUserVO.getId().equals(questionSubmit.getUserId())) {
+                
+                // 登录状态下，如果不是提交者本人，设置code为null
+                if (!loginUser.getId().equals(questionSubmit.getUserId())) {
                     questionSubmitVO.setCode(null);
                 }
             }
         }
 
+
+        
         return questionSubmitVO;
     }
 

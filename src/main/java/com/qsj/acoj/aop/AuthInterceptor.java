@@ -7,8 +7,10 @@ import com.qsj.acoj.model.entity.User;
 import com.qsj.acoj.model.enums.UserRoleEnum;
 import com.qsj.acoj.model.vo.LoginUserVO;
 import com.qsj.acoj.service.UserService;
+
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+
 import org.apache.commons.lang3.StringUtils;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -20,7 +22,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
  * 权限校验 AOP
- *
  */
 @Aspect
 @Component
@@ -43,6 +44,10 @@ public class AuthInterceptor {
         HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
         // 当前登录用户
         LoginUserVO loginUser = userService.getLoginUser(request);
+
+        if (loginUser.getUserRole().equals(UserRoleEnum.SUPER_ADMIN.getValue())) {
+            return joinPoint.proceed();
+        }
         // 必须有该权限才通过
         if (StringUtils.isNotBlank(mustRole)) {
             UserRoleEnum mustUserRoleEnum = UserRoleEnum.getEnumByValue(mustRole);
@@ -51,12 +56,12 @@ public class AuthInterceptor {
             }
             String userRole = loginUser.getUserRole();
             // 如果被封号，直接拒绝
-            if (UserRoleEnum.BAN.equals(mustUserRoleEnum)) {
+            if (UserRoleEnum.BANNED.equals(mustUserRoleEnum)) {
                 throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
             }
             // 必须有管理员权限
             if (UserRoleEnum.ADMIN.equals(mustUserRoleEnum)) {
-                if (!mustRole.equals(userRole)) {
+                if (!mustRole.equals(userRole) ) {
                     throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
                 }
             }

@@ -118,4 +118,12 @@ public interface UserService extends IService<User> {
 
     UserLoginRespVO refreshToken(String refreshToken);
 
+    /**
+     * 判断是否为超级管理员
+     *
+     * @param request
+     * @return
+     */
+    boolean isSuperAdmin(HttpServletRequest request);
+
 }

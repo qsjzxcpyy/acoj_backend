@@ -439,4 +439,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return ConvertUtils.convert(userTokenService.refreshToken(refreshToken));
     }
 
+    @Override
+    public boolean isSuperAdmin(HttpServletRequest request) {
+        LoginUserVO loginUser = this.getLoginUser(request);
+        return loginUser != null && UserRoleEnum.SUPER_ADMIN.getValue().equals(loginUser.getUserRole());
+    }
+
 }

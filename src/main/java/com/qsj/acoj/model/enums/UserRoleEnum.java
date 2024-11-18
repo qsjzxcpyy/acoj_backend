@@ -14,7 +14,8 @@ public enum UserRoleEnum {
 
     USER("用户", "user"),
     ADMIN("管理员", "admin"),
-    BAN("被封号", "ban");
+    SUPER_ADMIN("超级管理员", "superAdmin"),
+    BANNED("封禁", "ban");
 
     private final String text;
 

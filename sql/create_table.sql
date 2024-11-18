@@ -172,6 +172,19 @@ CREATE TABLE IF NOT EXISTS contest_rank
     isDelete        TINYINT DEFAULT 0 NOT NULL COMMENT '是否删除'  -- 删除标记：0 为有效，1 为删除
     ) COMMENT = '比赛排名表';
 
+CREATE TABLE IF NOT EXISTS admin_application
+(
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增id',
+    userId        BIGINT NOT NULL COMMENT '申请用户id',
+    reason        TEXT NOT NULL COMMENT '申请理由',
+    status        TINYINT DEFAULT 0 NOT NULL COMMENT '申请状态（0-待处理，1-通过，2-拒绝）',
+    result        VARCHAR(512) COMMENT '处理结果说明',
+    handleUserId  BIGINT COMMENT '处理人id',
+    createTime    DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    updateTime    DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    isDelete      TINYINT DEFAULT 0 NOT NULL COMMENT '是否删除'
+) COMMENT '管理员申请表';
+
 
 
 
