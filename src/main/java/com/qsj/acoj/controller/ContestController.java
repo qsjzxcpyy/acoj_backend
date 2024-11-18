@@ -299,16 +299,9 @@ public class ContestController {
                     // 获取该题目在此次比赛中的提交记录
                     QueryWrapper<ContestSubmission> submitQueryWrapper = new QueryWrapper<>();
                     submitQueryWrapper.eq("contestId", contestId)
-                            .eq("problemId", contestProblem.getProblemId());
+                            .eq("problemId", contestProblem.getProblemId())
+                            .eq("userId", loginUser.getId());
                     List<ContestSubmission> submissions = contestSubmissionMapper.selectList(submitQueryWrapper);
-
-                    // 过滤出当前用户的提交记录
-                    submissions = submissions.stream()
-                            .filter(submission -> {
-                                QuestionSubmit questionSubmit = questionSubmitService.getById(submission.getSubmissionId());
-                                return questionSubmit.getUserId().equals(loginUser.getId());
-                            })
-                            .collect(Collectors.toList());
 
                     // 设置提交次数
                     vo.setSubmitCount(submissions.size());
@@ -384,7 +377,7 @@ public class ContestController {
                     User user = userService.getById(rank.getParticipantId());
                     detailVO.setUserVO(userService.getUserVO(user));
 
-                    // 获取每���题的提交情况
+                    // 获取每题的提交情况
                     List<ContestProblemDetailVO> problemDetails = problems.stream()
                             .map(problem -> {
                                 ContestProblemDetailVO detail = new ContestProblemDetailVO();
@@ -398,15 +391,9 @@ public class ContestController {
                                 // 获取该用户对这道题的所有提交
                                 QueryWrapper<ContestSubmission> submitQueryWrapper = new QueryWrapper<>();
                                 submitQueryWrapper.eq("contestId", contestId)
-                                        .eq("problemId", problem.getProblemId());
+                                        .eq("problemId", problem.getProblemId())
+                                        .eq("userId", rank.getParticipantId());
                                 List<ContestSubmission> submissions = contestSubmissionMapper.selectList(submitQueryWrapper);
-
-                                submissions = submissions.stream().filter(contestSubmission -> {
-                                          QuestionSubmit questionSubmit = questionSubmitService.getById(contestSubmission.getSubmissionId());
-                                          User user1 = userService.getById(questionSubmit.getUserId());
-                                          return user1.getId().equals(rank.getParticipantId());
-                                        }
-                                        ).collect(Collectors.toList());
 
                                 // 统计提交情况
                                 detail.setSubmitCount(submissions.size());
@@ -544,7 +531,7 @@ public class ContestController {
             throw new BusinessException(ErrorCode.NOT_LOGIN_ERROR);
         }
 
-        // ��查比赛是否存在
+        // 检查比赛是否存在
         Contest contest = contestService.getById(contestId);
         if (contest == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "比赛不存在");
@@ -580,8 +567,8 @@ public class ContestController {
         QueryWrapper<ContestRank> allRankQueryWrapper = new QueryWrapper<>();
         allRankQueryWrapper.eq("contestId", contestId)
                 .orderByDesc("totalScore")
-                .orderByAsc("totalTime")
-                .orderByAsc("penaltyTime");
+                .orderByAsc("penaltyTime")
+                .orderByAsc("totalTime");
         List<ContestRank> allRanks = contestRankMapper.selectList(allRankQueryWrapper);
 
         // 找到当前用户的排名

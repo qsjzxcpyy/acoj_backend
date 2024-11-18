@@ -409,7 +409,8 @@ public class QuestionController {
                         // 未通过，检查是否已有通过记录
                         QueryWrapper<ContestSubmission> contestSubmissionQueryWrapper = new QueryWrapper<>();
                         contestSubmissionQueryWrapper.eq("contestId", contestId)
-                                .eq("problemId", questionSubmitAddRequest.getQuestionId());
+                                .eq("problemId", questionSubmitAddRequest.getQuestionId())
+                                .eq("userId", loginUser.getId());
                         List<ContestSubmission> contestSubmissions = contestSubmissionMapper.selectList(contestSubmissionQueryWrapper);
 
                         boolean hasAccepted = contestSubmissions.stream()
@@ -417,8 +418,7 @@ public class QuestionController {
                                     QuestionSubmit prevSubmit = questionSubmitService.getById(submission.getSubmissionId());
                                     String prevJudgeInfoStr = prevSubmit.getJudgeInfo();
                                     JudgeInfo prevJudgeInfo = JSONUtil.toBean(prevJudgeInfoStr, JudgeInfo.class);
-                                    return prevJudgeInfo.getMessage().equals(JudgeInfoMessageEnum.ACCEPTED.getText()) &&
-                                            prevSubmit.getUserId().equals(loginUser.getId());
+                                    return prevJudgeInfo.getMessage().equals(JudgeInfoMessageEnum.ACCEPTED.getText());
                                 });
 
                         // 只有在未通过且没有成功记录时才增加罚时
@@ -434,11 +434,12 @@ public class QuestionController {
                         contestRankMapper.updateById(contestRank);
                     }
 
-                    // 记录交关系
+                    // 记录提交关系
                     ContestSubmission contestSubmission = new ContestSubmission();
                     contestSubmission.setSubmissionId(result.getQuestionSubmitId());
                     contestSubmission.setContestId(contestId);
                     contestSubmission.setProblemId(questionSubmitAddRequest.getQuestionId());
+                    contestSubmission.setUserId(loginUser.getId());
                     contestSubmissionMapper.insert(contestSubmission);
                 } finally {
                     executor.shutdown();

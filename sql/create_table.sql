@@ -144,7 +144,8 @@ CREATE TABLE IF NOT EXISTS contest_submission
     id              BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增id',
     submissionId  BIGINT NOT NULL COMMENT '提交ID',
     contestId      BIGINT NOT NULL COMMENT '比赛ID',    -- 比赛ID
-    problemId      BIGINT NOT NULL COMMENT '题目ID'    -- 题目ID
+    problemId      BIGINT NOT NULL COMMENT '题目ID'  ,  -- 题目ID
+    userId       BIGINT NOT NULL
 ) COMMENT = '比赛题目提交记录表';
 
 CREATE TABLE IF NOT EXISTS content_participant
