@@ -23,6 +23,7 @@ import com.qsj.acoj.model.dto.questionsubmit.QuestionSubmitAddRequest;
 import com.qsj.acoj.model.dto.questionsubmit.QuestionSubmitQueryRequest;
 import com.qsj.acoj.model.entity.*;
 import com.qsj.acoj.model.enums.JudgeInfoMessageEnum;
+import com.qsj.acoj.model.enums.UserRoleEnum;
 import com.qsj.acoj.model.vo.AiChatRecordVo;
 import com.qsj.acoj.model.vo.LoginUserVO;
 import com.qsj.acoj.model.vo.QuestionSubmitVO;
@@ -179,7 +180,8 @@ public class QuestionController {
         }
         //权限校验，非本人和管理员不能获取到完整的题目信息
         LoginUserVO loginUser = userService.getLoginUser(request);
-        if (!(question.getUserId().equals(loginUser.getId())) && !userService.isAdmin(request)) {
+        if (!(question.getUserId().equals(loginUser.getId())) && !userService.isAdmin(request)
+                && !(loginUser.getUserRole().equals(UserRoleEnum.SUPER_ADMIN.getValue()))) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
         return ResultUtils.success(question);

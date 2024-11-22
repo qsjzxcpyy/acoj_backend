@@ -56,11 +56,11 @@ public class JavaLanguageJudgeStrategyImpl implements JudgeStrategy {
         JudgeConfig limitJudgeConfig = JSONUtil.toBean(limitJudgeConfigStr, JudgeConfig.class);
 
 
-        if(limitJudgeConfig.getMemoryLimit() < memory){
+        if(limitJudgeConfig.getMemoryLimit() * 1024 < memory){
             finalJudgeInfo.setMessage(JudgeInfoMessageEnum.MEMORY_LIMIT_EXCEEDED.getText());
             return finalJudgeInfo;
         }
-        long JAVA_PROGRAM_TIME_COST = 100000l;
+        long JAVA_PROGRAM_TIME_COST = 1000l;
         if(limitJudgeConfig.getTimeLimit() < judgeInfo.getTime() - JAVA_PROGRAM_TIME_COST){
             finalJudgeInfo.setMessage(JudgeInfoMessageEnum.TIME_LIMIT_EXCEEDED.getText());
             return finalJudgeInfo;
