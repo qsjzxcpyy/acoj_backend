@@ -60,8 +60,8 @@ public class JavaLanguageJudgeStrategyImpl implements JudgeStrategy {
             finalJudgeInfo.setMessage(JudgeInfoMessageEnum.MEMORY_LIMIT_EXCEEDED.getText());
             return finalJudgeInfo;
         }
-        long JAVA_PROGRAM_TIME_COST = 1000l;
-        if(limitJudgeConfig.getTimeLimit() < judgeInfo.getTime() - JAVA_PROGRAM_TIME_COST){
+        long JAVA_PROGRAM_TIME_COST = 800l;
+        if(limitJudgeConfig.getTimeLimit() * 1000 < judgeInfo.getTime() - JAVA_PROGRAM_TIME_COST){
             finalJudgeInfo.setMessage(JudgeInfoMessageEnum.TIME_LIMIT_EXCEEDED.getText());
             return finalJudgeInfo;
         }
