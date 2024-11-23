@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -174,12 +174,12 @@
             <version>33.0.0-jre</version>
         </dependency>
 
-         <!-- https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp -->
-         <dependency>
-             <groupId>com.squareup.okhttp3</groupId>
-             <artifactId>okhttp</artifactId>
-             <version>4.12.0</version>
-         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.squareup.okhttp3/okhttp -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
+        </dependency>
 
         <dependency>
             <groupId>org.json</groupId>
@@ -210,11 +210,10 @@
         </dependency>
 
 
-
     </dependencies>
     <build>
         <plugins>
-<!--             Spring Boot Maven Plugin-->
+            <!--             Spring Boot Maven Plugin-->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -236,7 +235,7 @@
                 </executions>
             </plugin>
 
-<!--             Maven Compiler Plugin-->
+            <!--             Maven Compiler Plugin-->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -255,37 +254,43 @@
                             <artifactId>lombok</artifactId>
                             <version>1.18.28</version>
                         </path>
+                        <!-- 如果有lombok，需要这个处理器 -->
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                            <version>0.2.0</version>
+                        </path>
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
         </plugins>
     </build>
 
-<!--    <build>-->
-<!--        <plugins>-->
-<!--            <plugin>-->
-<!--                <groupId>org.apache.maven.plugins</groupId>-->
-<!--                <artifactId>maven-compiler-plugin</artifactId>-->
-<!--                <version>3.8.1</version>-->
-<!--                <configuration>-->
-<!--                    <source>1.8</source>-->
-<!--                    <target>1.8</target>-->
-<!--                    <annotationProcessorPaths>-->
-<!--                        <path>-->
-<!--                            <groupId>org.mapstruct</groupId>-->
-<!--                            <artifactId>mapstruct-processor</artifactId>-->
-<!--                            <version>1.5.5.Final</version>-->
-<!--                        </path>-->
-<!--                        <path>-->
-<!--                            <groupId>org.projectlombok</groupId>-->
-<!--                            <artifactId>lombok</artifactId>-->
-<!--                            <version>1.18.28</version>-->
-<!--                        </path>-->
-<!--                    </annotationProcessorPaths>-->
-<!--                </configuration>-->
-<!--            </plugin>-->
-<!--        </plugins>-->
-<!--    </build>-->
+    <!--    <build>-->
+    <!--        <plugins>-->
+    <!--            <plugin>-->
+    <!--                <groupId>org.apache.maven.plugins</groupId>-->
+    <!--                <artifactId>maven-compiler-plugin</artifactId>-->
+    <!--                <version>3.8.1</version>-->
+    <!--                <configuration>-->
+    <!--                    <source>1.8</source>-->
+    <!--                    <target>1.8</target>-->
+    <!--                    <annotationProcessorPaths>-->
+    <!--                        <path>-->
+    <!--                            <groupId>org.mapstruct</groupId>-->
+    <!--                            <artifactId>mapstruct-processor</artifactId>-->
+    <!--                            <version>1.5.5.Final</version>-->
+    <!--                        </path>-->
+    <!--                        <path>-->
+    <!--                            <groupId>org.projectlombok</groupId>-->
+    <!--                            <artifactId>lombok</artifactId>-->
+    <!--                            <version>1.18.28</version>-->
+    <!--                        </path>-->
+    <!--                    </annotationProcessorPaths>-->
+    <!--                </configuration>-->
+    <!--            </plugin>-->
+    <!--        </plugins>-->
+    <!--    </build>-->
 
 
 </project>
