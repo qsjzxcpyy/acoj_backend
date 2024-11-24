@@ -304,9 +304,21 @@ public class QuestionController {
             @RequestBody QuestionSubmitAddRequest questionSubmitAddRequest,
             @RequestParam(required = false) Long contestId,
             HttpServletRequest request) {
+
+        String token = request.getHeader(QuestionConstant.REQUEST_TOKEN);
+        System.out.println("前端携带的请求token: "  + token);
+        if(token == null || token == ""){
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"调用接口未生成token");
+        }
+
+        if(!RequestTokenUtils.verify(token)){
+            throw new BusinessException(ErrorCode.OPERATION_ERROR,"提交频繁，请稍后重试");
+        }
+
         if (questionSubmitAddRequest == null || questionSubmitAddRequest.getQuestionId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
+
         // 登录才能提交
         final LoginUserVO loginUser = userService.getLoginUser(request);
         if (loginUser == null) {
