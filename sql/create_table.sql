@@ -4,6 +4,7 @@ create database if not exists acoj;
 -- 切换库
 use acoj;
 
+
 -- 用户表
 create table if not exists user
 (
@@ -105,35 +106,35 @@ create table if not exists ai_access_token
 
 create table if not exists ai_question_chat
 (
-    id           bigint auto_increment comment 'id' primary key,
-    userId       bigint                             not null,
-    userName     varchar(128)                       not null,
+    id          bigint auto_increment comment 'id' primary key,
+    userId      bigint                             not null,
+    userName    varchar(128)                       not null,
     userRequest text,
     aiResponse  text                               not null,
-    createTime   datetime default CURRENT_TIMESTAMP not null comment '创建时间',
-   index idx_userId (userId)
+    createTime  datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    index idx_userId (userId)
 ) comment '对话记录';
 
 CREATE TABLE IF NOT EXISTS contest
 (
-    id           BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '比赛ID',
-    name         VARCHAR(255) NOT NULL COMMENT '比赛名称',
-    description  TEXT COMMENT '比赛描述',
-    startTime    DATETIME NOT NULL COMMENT '比赛开始时间',
-    endTime      DATETIME NOT NULL COMMENT '比赛结束时间',
-    status       ENUM('pending', 'ongoing', 'completed') DEFAULT 'pending' NOT NULL COMMENT '比赛状态',
-    userId       BIGINT NOT NULL COMMENT '创建者id',
-    createTime   DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
-    updateTime   DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    isDelete     TINYINT DEFAULT 0 NOT NULL COMMENT '是否删除'
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '比赛ID',
+    name        VARCHAR(255)                                                       NOT NULL COMMENT '比赛名称',
+    description TEXT COMMENT '比赛描述',
+    startTime   DATETIME                                                           NOT NULL COMMENT '比赛开始时间',
+    endTime     DATETIME                                                           NOT NULL COMMENT '比赛结束时间',
+    status      ENUM ('pending', 'ongoing', 'completed') DEFAULT 'pending'         NOT NULL COMMENT '比赛状态',
+    userId      BIGINT                                                             NOT NULL COMMENT '创建者id',
+    createTime  DATETIME                                 DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    updateTime  DATETIME                                 DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    isDelete    TINYINT                                  DEFAULT 0                 NOT NULL COMMENT '是否删除'
 ) COMMENT = '比赛表';
 
 CREATE TABLE IF NOT EXISTS contest_problem
 (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增id',
-    contestId   BIGINT NOT NULL COMMENT '比赛ID',
-    problemId   BIGINT NOT NULL COMMENT '题目ID',
-    problemOrder       INT NOT NULL COMMENT '题目顺序',
+    contestId    BIGINT                             NOT NULL COMMENT '比赛ID',
+    problemId    BIGINT                             NOT NULL COMMENT '题目ID',
+    problemOrder INT                                NOT NULL COMMENT '题目顺序',
     createTime   DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
     updateTime   DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 
@@ -141,48 +142,48 @@ CREATE TABLE IF NOT EXISTS contest_problem
 
 CREATE TABLE IF NOT EXISTS contest_submission
 (
-    id              BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增id',
-    submissionId  BIGINT NOT NULL COMMENT '提交ID',
-    contestId      BIGINT NOT NULL COMMENT '比赛ID',    -- 比赛ID
-    problemId      BIGINT NOT NULL COMMENT '题目ID'  ,  -- 题目ID
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增id',
+    submissionId BIGINT NOT NULL COMMENT '提交ID',
+    contestId    BIGINT NOT NULL COMMENT '比赛ID', -- 比赛ID
+    problemId    BIGINT NOT NULL COMMENT '题目ID', -- 题目ID
     userId       BIGINT NOT NULL
 ) COMMENT = '比赛题目提交记录表';
 
 CREATE TABLE IF NOT EXISTS content_participant
 (
-    id           BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增id',
-    contestId   BIGINT NOT NULL COMMENT '所属比赛ID',
-    userId      BIGINT NOT NULL COMMENT '用户ID',
-    status          ENUM('REGISTERED', 'COMPLETED', 'CANCELLED') DEFAULT 'REGISTERED' COMMENT '报名状态',
-    createTime   DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
-    updateTime   DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增id',
+    contestId  BIGINT                                                                  NOT NULL COMMENT '所属比赛ID',
+    userId     BIGINT                                                                  NOT NULL COMMENT '用户ID',
+    status     ENUM ('REGISTERED', 'COMPLETED', 'CANCELLED') DEFAULT 'REGISTERED' COMMENT '报名状态',
+    createTime DATETIME                                      DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    updateTime DATETIME                                      DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
 ) COMMENT = '参与者表';
 CREATE TABLE IF NOT EXISTS contest_rank
 (
-    id              BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增id',
-    contestId      BIGINT NOT NULL COMMENT '比赛ID',    -- 外键：比赛ID
-    participantId  BIGINT NOT NULL COMMENT '参与者ID',  -- 外键：选手ID
-    totalScore     INT DEFAULT 0 COMMENT '总得分',      -- 总得分
-    totalTime      INT DEFAULT 0 COMMENT '总时间（分钟）',  -- 完成比赛所用的总时间（单位：分钟）
-    penaltyTime    INT DEFAULT 0 COMMENT '总罚时（分钟）',  -- 总罚时（单位：分钟）
-    solvedProblems INT DEFAULT 0 COMMENT '解决的题目数',  -- 解决的题目数量
-    contestRank            INT COMMENT '比赛排名',              -- 比赛排名
-    createTime      DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
-    updateTime      DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    isDelete        TINYINT DEFAULT 0 NOT NULL COMMENT '是否删除'  -- 删除标记：0 为有效，1 为删除
-    ) COMMENT = '比赛排名表';
+    id             BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增id',
+    contestId      BIGINT                             NOT NULL COMMENT '比赛ID',   -- 外键：比赛ID
+    participantId  BIGINT                             NOT NULL COMMENT '参与者ID', -- 外键：选手ID
+    totalScore     INT      DEFAULT 0 COMMENT '总得分',                            -- 总得分
+    totalTime      INT      DEFAULT 0 COMMENT '总时间（分钟）',                      -- 完成比赛所用的总时间（单位：分钟）
+    penaltyTime    INT      DEFAULT 0 COMMENT '总罚时（分钟）',                      -- 总罚时（单位：分钟）
+    solvedProblems INT      DEFAULT 0 COMMENT '解决的题目数',                      -- 解决的题目数量
+    contestRank    INT COMMENT '比赛排名',                                         -- 比赛排名
+    createTime     DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    updateTime     DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    isDelete       TINYINT  DEFAULT 0                 NOT NULL COMMENT '是否删除'  -- 删除标记：0 为有效，1 为删除
+) COMMENT = '比赛排名表';
 
 CREATE TABLE IF NOT EXISTS admin_application
 (
-    id            BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增id',
-    userId        BIGINT NOT NULL COMMENT '申请用户id',
-    reason        TEXT NOT NULL COMMENT '申请理由',
-    status        TINYINT DEFAULT 0 NOT NULL COMMENT '申请状态（0-待处理，1-通过，2-拒绝）',
-    result        VARCHAR(512) COMMENT '处理结果说明',
-    handleUserId  BIGINT COMMENT '处理人id',
-    createTime    DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
-    updateTime    DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    isDelete      TINYINT DEFAULT 0 NOT NULL COMMENT '是否删除'
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '自增id',
+    userId       BIGINT                             NOT NULL COMMENT '申请用户id',
+    reason       TEXT                               NOT NULL COMMENT '申请理由',
+    status       TINYINT  DEFAULT 0                 NOT NULL COMMENT '申请状态（0-待处理，1-通过，2-拒绝）',
+    result       VARCHAR(512) COMMENT '处理结果说明',
+    handleUserId BIGINT COMMENT '处理人id',
+    createTime   DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL COMMENT '创建时间',
+    updateTime   DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    isDelete     TINYINT  DEFAULT 0                 NOT NULL COMMENT '是否删除'
 ) COMMENT '管理员申请表';
 
 
